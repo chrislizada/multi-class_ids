@@ -46,7 +46,19 @@ def main(data_path, optimize_hyperparams=True, use_dae=True, use_smote=True):
     print("="*80)
     df = preprocessor.load_data(data_path)
     
-    X, y = preprocessor.preprocess(df, label_column='label', fit=True)
+    # Auto-detect label column (case-insensitive)
+    label_column = None
+    for col in df.columns:
+        if col.lower() == 'label':
+            label_column = col
+            break
+    
+    if label_column is None:
+        raise ValueError("No 'label' or 'Label' column found in dataset")
+    
+    print(f"Using label column: '{label_column}'")
+    
+    X, y = preprocessor.preprocess(df, label_column=label_column, fit=True)
     
     X_train, X_val, X_test, y_train, y_val, y_test = preprocessor.split_data(
         X, y,

@@ -123,52 +123,173 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
+## Workflow Overview
+
+This implementation follows a complete end-to-end pipeline for multi-class intrusion detection:
+
+```
+1. Data Preparation (merge_dataset_sampled.py)
+   └─> Download CIC IoT-DIAD 2024 dataset
+   └─> Sample 10% from each attack class (~540K samples)
+   └─> Merge 132 CSV files into single dataset
+   └─> Output: data/merged_flow_dataset.csv
+
+2. Data Preprocessing (src/preprocessing.py)
+   └─> Handle missing values (median/mode imputation)
+   └─> Feature engineering (std, variance, skewness, kurtosis)
+   └─> Remove constant features (variance < threshold)
+   └─> Remove highly correlated features (correlation > 0.95)
+   └─> RobustScaler normalization
+   └─> OneHotEncoder for categorical features
+   └─> Train/test split (80/20)
+
+3. Dimensionality Reduction (src/models/dae.py)
+   └─> Denoising Autoencoder (DAE)
+   └─> Optuna hyperparameter optimization (20 trials)
+   └─> Reduce features: 84+ → 32-256 latent dimensions
+   └─> Save encoder for inference
+
+4. Class Balancing (src/models/smote_balancer.py)
+   └─> Calculate class weights (before SMOTE)
+   └─> Auto-detect minority classes
+   └─> Apply Borderline-SMOTE / ADASYN
+   └─> Dynamic k_neighbors adjustment
+   └─> Output: balanced training set
+
+5. Model Training (main.py)
+   ├─> MLP Classifier (src/models/mlp_classifier.py)
+   │   └─> Optuna optimization: layers, neurons, activation, dropout
+   │   └─> Focal Loss for class imbalance
+   │   └─> Early stopping + best model checkpoint
+   │
+   ├─> 1D-CNN Classifier (src/models/cnn_classifier.py)
+   │   └─> Optuna optimization: filters, kernels, dropout
+   │   └─> Multi-kernel architecture (3x3, 5x5, 7x7)
+   │   └─> Focal Loss + class weights
+   │
+   ├─> BiLSTM Classifier (src/models/lstm_classifier.py)
+   │   └─> Optuna optimization: LSTM units, layers, dropout
+   │   └─> Self-attention mechanism
+   │   └─> Bidirectional processing
+   │
+   └─> Ensemble Model (src/models/ensemble.py)
+       └─> Weighted voting (optimized weights)
+       └─> XGBoost stacking meta-learner
+       └─> Soft voting for probability calibration
+
+6. Evaluation (src/utils/metrics.py)
+   └─> Generate confusion matrices
+   └─> ROC curves (One-vs-Rest)
+   └─> Classification reports (per-class metrics)
+   └─> Save all metrics to JSON
+   └─> Create visualizations (PNG)
+
+7. Results (results/experiment_YYYYMMDD_HHMMSS/)
+   └─> summary_results.csv - Model comparison
+   └─> Per-model directories with metrics and trained models
+   └─> Confusion matrices, ROC curves, reports
+```
+
 ## Usage
 
-### Basic Training
-
-Train all models with hyperparameter optimization:
+### Step 1: Download and Merge Dataset
 
 ```bash
-python main.py --data data/your_dataset.csv
+# Download CIC IoT-DIAD 2024 dataset
+# Extract to: data/ciciot_idad_2024/
+
+# Merge with 10% sampling (recommended)
+python merge_dataset_sampled.py
+
+# Custom sampling (e.g., 20%)
+python merge_dataset_sampled.py --sample-fraction 0.2
+
+# Specify custom paths
+python merge_dataset_sampled.py \
+  --dataset-dir data/ciciot_idad_2024 \
+  --output data/merged_flow_dataset.csv
 ```
 
-### Advanced Options
+### Step 2: Train Models
 
+**Option A: Full Pipeline (Recommended)**
 ```bash
-# Fast training (no hyperparameter optimization)
-python main.py --data data/dataset.csv --no-optimize
+# Train all models with hyperparameter optimization
+python main.py --data data/merged_flow_dataset.csv
 
+# What happens:
+# - Preprocessing (feature engineering, normalization)
+# - DAE dimensionality reduction (optimized)
+# - SMOTE class balancing (optimized)
+# - Train MLP, CNN, LSTM, Ensemble (each optimized)
+# - Generate evaluation metrics and visualizations
+# - Save all models and results
+```
+
+**Option B: Fast Training (Skip Optimization)**
+```bash
+# Use default hyperparameters (faster)
+python main.py --data data/merged_flow_dataset.csv --no-optimize
+
+# Time: ~30-60 minutes (vs 2-4 hours with optimization)
+```
+
+**Option C: Custom Configuration**
+```bash
 # Without DAE dimensionality reduction
-python main.py --data data/dataset.csv --no-dae
+python main.py --data data/merged_flow_dataset.csv --no-dae
 
 # Without SMOTE balancing
-python main.py --data data/dataset.csv --no-smote
+python main.py --data data/merged_flow_dataset.csv --no-smote
 
-# Minimal configuration (fastest)
-python main.py --data data/dataset.csv --no-optimize --no-dae --no-smote
+# Minimal (fastest, for testing)
+python main.py --data data/merged_flow_dataset.csv --no-optimize --no-dae --no-smote
 ```
 
-### Evaluating Trained Models
+### Step 3: Evaluate Trained Models
 
 ```bash
-# Evaluate on new data
-python evaluate.py --experiment results/experiment_20240101_120000 --data data/test_set.csv
+# Evaluate on new test data
+python evaluate.py \
+  --experiment results/experiment_20241207_120000 \
+  --data data/test_set.csv
 
-# Specify output directory
-python evaluate.py --experiment results/experiment_20240101_120000 --data data/test_set.csv --output results/evaluation
+# Specify custom output directory
+python evaluate.py \
+  --experiment results/experiment_20241207_120000 \
+  --data data/test_set.csv \
+  --output results/evaluation_test
+```
+
+### Step 4: View Results
+
+```bash
+# View summary results
+cat results/experiment_20241207_120000/summary_results.csv
+
+# View per-model metrics
+cat results/experiment_20241207_120000/cnn/report.txt
+cat results/experiment_20241207_120000/mlp/report.txt
+cat results/experiment_20241207_120000/lstm/report.txt
+cat results/experiment_20241207_120000/ensemble/report.txt
+
+# Visualizations (confusion matrices, ROC curves)
+# Located in: results/experiment_20241207_120000/{model_name}/*.png
 ```
 
 ### Dataset Requirements
 
+This project is designed for the **CIC IoT-DIAD 2024** dataset.
+
 **Format**: CSV or Parquet
 
-**Required column**: `label` (containing attack class names)
+**Required column**: `label` or `Label` (containing attack class names)
 
 **Supported classes** (automatically detected):
 - Benign
 - BruteForce
 - DDoS
+- DoS
 - Mirai
 - Recon
 - Spoofing
@@ -178,11 +299,29 @@ python evaluate.py --experiment results/experiment_20240101_120000 --data data/t
 
 **Missing values**: Handled automatically (median for numerical, mode for categorical)
 
-**Example dataset structure**:
-```csv
-source_ip,dest_port,protocol,flow_duration,packet_length_mean,...,label
-192.168.1.1,80,TCP,1234,512,...,Benign
-10.0.0.5,22,TCP,5678,1024,...,BruteForce
+**Download**: See [DATASET_GUIDE.md](DATASET_GUIDE.md) for detailed instructions on obtaining and preparing the CIC IoT-DIAD 2024 dataset.
+
+**Dataset Sampling**: Due to the large size of the CIC IoT-DIAD 2024 dataset (~5-6M samples), this implementation uses **10% stratified sampling** per attack class to balance computational efficiency with model performance. The `merge_dataset_sampled.py` script samples each CSV file individually before merging to avoid memory issues.
+
+**Merging the dataset**:
+```bash
+# Default: 10% sampling per attack class
+python merge_dataset_sampled.py
+
+# Custom sampling (e.g., 20%)
+python merge_dataset_sampled.py --sample-fraction 0.2
+
+# Specify custom paths
+python merge_dataset_sampled.py --dataset-dir data/ciciot_idad_2024 --output data/merged_flow_dataset.csv
+```
+
+**Example training usage**:
+```bash
+# Using merged flow-based features (recommended)
+python main.py --data data/merged_flow_dataset.csv
+
+# Quick test without optimization
+python main.py --data data/merged_flow_dataset.csv --no-optimize
 ```
 
 ## Output Structure
@@ -255,6 +394,49 @@ SMOTE_CONFIG = {
 }
 ```
 
+## Dataset Preparation
+
+### Merging CIC IoT-DIAD 2024 Dataset
+
+The dataset contains 132 CSV files across 8 attack categories with ~5-6 million samples total. Three merge scripts are provided:
+
+**1. Recommended: Sample-Limited Merge (10% sampling)**
+```bash
+python merge_dataset_sampled.py
+```
+- Samples 10% from each CSV file individually (memory-efficient)
+- Output: ~540K samples total
+- Prevents out-of-memory errors on limited hardware
+- Maintains class distribution
+
+**2. Memory-Efficient Merge (Chunked Processing)**
+```bash
+python merge_dataset_efficient.py
+```
+- Processes files in 50K-row chunks
+- Output: Full dataset (~5-6M samples)
+- Requires sufficient disk space
+
+**3. Standard Merge (Full Dataset)**
+```bash
+python merge_dataset.py
+```
+- Loads all data into memory at once
+- Requires 16GB+ RAM
+- Output: Full dataset (~5-6M samples)
+
+**Adjusting sample fraction:**
+```bash
+# 5% sampling (~270K samples)
+python merge_dataset_sampled.py --sample-fraction 0.05
+
+# 20% sampling (~1.08M samples)
+python merge_dataset_sampled.py --sample-fraction 0.2
+
+# 50% sampling (~2.7M samples)
+python merge_dataset_sampled.py --sample-fraction 0.5
+```
+
 ## Performance Metrics
 
 All models are evaluated using:
@@ -273,32 +455,40 @@ All models are evaluated using:
 
 ## Expected Performance
 
-### Baseline (Original Paper)
-| Model | Accuracy | F1-Score |
-|-------|----------|----------|
-| MLP   | 74.2%    | 0.7403   |
-| CNN   | 73.35%   | 0.7272   |
-| LSTM  | 68.18%   | 0.6774   |
-| RNN   | 58.14%   | 0.5630   |
+Performance metrics will be generated after training on the CIC IoT-DIAD 2024 dataset.
 
-### Target (This Implementation)
-| Model | Accuracy | F1-Score | Improvement |
-|-------|----------|----------|-------------|
-| **MLP** | **88-92%** | **0.87-0.91** | +13-18% |
-| **CNN** | **90-94%** | **0.89-0.93** | +17-21% |
-| **BiLSTM+Attention** | **85-90%** | **0.84-0.89** | +17-22% |
-| **Ensemble** | **92-95%** | **0.91-0.94** | **+18-21%** |
+### Dataset Configuration
+- **Sampling**: 10% stratified sampling per attack class (~540K samples)
+- **Attack Classes**: 8 categories (Benign, BruteForce, DDoS, DoS, Mirai, Recon, Spoofing, Web-Based)
+- **Features**: 84 flow-based features + engineered statistical features
+- **Class Balancing**: Borderline-SMOTE / ADASYN applied to minority classes
 
-### Per-Class Improvements
-| Class | Baseline F1 | Target F1 | Improvement |
-|-------|-------------|-----------|-------------|
-| Benign | 0.51 | **0.75-0.80** | +47-57% |
-| BruteForce | 0.92 | **0.95+** | +3%+ |
-| DDoS | 0.90 | **0.95+** | +5%+ |
-| Mirai | 0.74 | **0.85-0.88** | +15-19% |
-| **Recon** | 0.43 | **0.70-0.75** | **+63-74%** |
-| **Spoofing** | 0.61 | **0.78-0.82** | **+28-34%** |
-| Web-Based | 0.90 | **0.93-0.95** | +3-5% |
+### Models to be Evaluated
+
+| Model | Description | Key Features |
+|-------|-------------|--------------|
+| **MLP** | Multi-Layer Perceptron | Residual connections, batch normalization, 3-4 hidden layers |
+| **1D-CNN** | Convolutional Neural Network | Multi-kernel (3x3, 5x5, 7x7), parallel feature extraction |
+| **BiLSTM+Attention** | Bidirectional LSTM | Self-attention mechanism, recurrent dropout |
+| **Ensemble** | Stacking ensemble | XGBoost meta-learner combining CNN+MLP+LSTM predictions |
+
+### Evaluation Metrics
+
+All experiments will report:
+- **Overall Accuracy** - Correct classifications across all classes
+- **Precision** (Macro/Weighted) - Per-class and weighted average
+- **Recall** (Macro/Weighted) - Per-class and weighted average  
+- **F1-Score** (Macro/Weighted) - Harmonic mean of precision/recall
+- **ROC AUC** - Area under ROC curve (One-vs-Rest)
+- **Confusion Matrix** - Detailed per-class performance
+- **Per-Class Metrics** - Individual F1, precision, recall for each attack type
+
+### Output Location
+
+Results are saved in `results/experiment_YYYYMMDD_HHMMSS/`:
+- `summary_results.csv` - Model comparison table
+- `cnn/`, `mlp/`, `lstm/`, `ensemble/` - Per-model metrics and visualizations
+- Confusion matrices, ROC curves, classification reports
 
 ## Bug Fixes & Improvements
 
@@ -312,18 +502,21 @@ All models are evaluated using:
 
 See `BUGS_FOUND.md` and `BUGFIXES_APPLIED.md` for detailed information.
 
-## Key Improvements Over Original Paper
+## Key Technical Improvements
 
-| Improvement | Impact |
-|-------------|--------|
-| **Focal Loss** vs Cross-Entropy | +8-12% minority class F1 |
-| **Borderline-SMOTE** vs Standard SMOTE | +10-15% Recon/Spoofing F1 |
-| **Multi-kernel 1D-CNN** vs Basic CNN | +5-8% overall accuracy |
-| **BiLSTM+Attention** vs Vanilla LSTM | +17-22% accuracy improvement |
-| **MLP with Residual** vs Standard MLP | +3-5% accuracy, better convergence |
-| **Ensemble Stacking** vs Single Model | +3-5% final accuracy |
-| **Optuna Optimization** vs Manual Tuning | +5-10% with optimal hyperparameters |
-| **Advanced Feature Engineering** | +2-4% overall performance |
+| Improvement | Description |
+|-------------|-------------|
+| **Focal Loss** | Addresses class imbalance by down-weighting easy examples (α=0.25, γ=2.0) |
+| **Borderline-SMOTE** | Generates synthetic samples near decision boundaries for hard-to-classify minority classes |
+| **ADASYN** | Adaptive density-based sampling that focuses on difficult regions |
+| **Multi-kernel 1D-CNN** | Parallel convolution paths (3x3, 5x5, 7x7) for multi-scale feature extraction |
+| **BiLSTM+Attention** | Bidirectional LSTM with self-attention for temporal context and focus |
+| **MLP with Residual Connections** | Skip connections to prevent gradient vanishing in deep networks |
+| **Ensemble Stacking** | XGBoost meta-learner combines predictions from CNN, MLP, and LSTM |
+| **Optuna Optimization** | Bayesian hyperparameter optimization with 20+ trials per model |
+| **Advanced Feature Engineering** | Statistical features (std, variance, skewness, kurtosis) added to flow features |
+| **RobustScaler** | Outlier-resistant normalization using median and IQR |
+| **Auto-detection of Minority Classes** | Dynamic identification based on distribution, no hardcoding |
 
 ## Testing & Validation
 
