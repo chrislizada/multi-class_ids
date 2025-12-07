@@ -48,6 +48,29 @@ class DataPreprocessor:
         
         return df
     
+    def handle_infinite_values(self, df):
+        print("Handling infinite and extreme values...")
+        
+        numeric_cols = df.select_dtypes(include=['int64', 'float64']).columns
+        
+        for col in numeric_cols:
+            # Replace infinity with NaN
+            df[col] = df[col].replace([np.inf, -np.inf], np.nan)
+            
+            # Fill NaN with median
+            if df[col].isna().any():
+                median_val = df[col].median()
+                df[col].fillna(median_val, inplace=True)
+            
+            # Cap extreme values at 99.9th percentile
+            if df[col].std() > 0:
+                upper_limit = df[col].quantile(0.999)
+                lower_limit = df[col].quantile(0.001)
+                df[col] = df[col].clip(lower=lower_limit, upper=upper_limit)
+        
+        print("Infinite and extreme values handled")
+        return df
+    
     def identify_column_types(self, df, label_column='label'):
         df_features = df.drop(columns=[label_column], errors='ignore')
         
@@ -227,6 +250,7 @@ class DataPreprocessor:
         print("="*80 + "\n")
         
         df = self.handle_missing_values(df)
+        df = self.handle_infinite_values(df)
         
         if label_column in df.columns:
             labels = df[label_column]
