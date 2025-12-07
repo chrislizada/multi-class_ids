@@ -234,6 +234,16 @@ class DataPreprocessor:
         else:
             raise ValueError(f"Label column '{label_column}' not found in dataframe")
         
+        # Drop high-cardinality identifier columns that shouldn't be encoded
+        id_columns = ['Flow ID', 'Src IP', 'Dst IP', 'Src Port', 'Dst Port', 
+                      'Timestamp', 'Flow_ID', 'Source_IP', 'Destination_IP',
+                      'Source_Port', 'Destination_Port']
+        
+        columns_to_drop = [col for col in id_columns if col in df_features.columns]
+        if columns_to_drop:
+            print(f"Dropping identifier columns: {columns_to_drop}")
+            df_features = df_features.drop(columns=columns_to_drop)
+        
         self.identify_column_types(df_features)
         
         df_features = self.encode_categorical_features(df_features, fit=fit)
