@@ -76,10 +76,13 @@ def merge_dataset_sampled(dataset_dir="data/ciciot_idad_2024",
                     print(f"  Skipping {file_name} (0 samples)")
                     continue
                 
-                if 'Label' not in df.columns and 'label' not in df.columns:
-                    df['Label'] = attack_type
-                elif 'label' in df.columns:
-                    df.rename(columns={'label': 'Label'}, inplace=True)
+                # Always override Label column with attack type from directory name
+                if 'label' in df.columns:
+                    df.drop(columns=['label'], inplace=True)
+                if 'Label' in df.columns:
+                    df.drop(columns=['Label'], inplace=True)
+                
+                df['Label'] = attack_type
                 
                 n_file_samples = max(1, int(len(df) * sample_fraction))
                 sampled = df.sample(n=n_file_samples, random_state=random_state)
