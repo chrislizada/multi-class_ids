@@ -64,46 +64,48 @@ def merge_dataset_sampled(dataset_dir="data/ciciot_idad_2024",
         print(f"  Found {len(csv_files)} file(s)")
         
         attack_dfs = []
-        attack_samples = 0
+        attack_total_count = 0
         
         for csv_file in csv_files:
             try:
                 file_name = os.path.basename(csv_file)
-                print(f"  Reading {file_name}...", end=' ', flush=True)
                 
                 df = pd.read_csv(csv_file)
+                
+                if len(df) == 0:
+                    print(f"  Skipping {file_name} (0 samples)")
+                    continue
                 
                 if 'Label' not in df.columns and 'label' not in df.columns:
                     df['Label'] = attack_type
                 elif 'label' in df.columns:
                     df.rename(columns={'label': 'Label'}, inplace=True)
                 
-                attack_dfs.append(df)
-                attack_samples += len(df)
+                n_file_samples = max(1, int(len(df) * sample_fraction))
+                sampled = df.sample(n=n_file_samples, random_state=random_state)
                 
-                print(f"{len(df):,} samples")
+                attack_dfs.append(sampled)
+                attack_total_count += len(df)
+                
+                print(f"  {file_name}: {len(df):,} -> {n_file_samples:,} samples")
                 
             except Exception as e:
-                print(f"Error: {e}")
+                print(f"  Error reading {csv_file}: {e}")
                 continue
         
         if len(attack_dfs) == 0:
             print(f"  No valid data loaded for {attack_type}")
             continue
         
-        print(f"\n  Combining {len(attack_dfs)} file(s) for {attack_type}...")
+        print(f"\n  Combining {len(attack_dfs)} sampled file(s) for {attack_type}...")
         combined_df = pd.concat(attack_dfs, ignore_index=True)
         
-        print(f"  Total available: {len(combined_df):,} samples")
+        print(f"  Total available: {attack_total_count:,} samples")
+        print(f"  Total sampled: {len(combined_df):,} samples ({sample_fraction*100:.1f}%)")
         
-        n_samples = max(1, int(len(combined_df) * sample_fraction))
-        print(f"  Sampling {sample_fraction*100:.1f}% = {n_samples:,} samples...")
-        
-        sampled_df = combined_df.sample(n=n_samples, random_state=random_state)
-        all_dataframes.append(sampled_df)
-        attack_summary[attack_type] = n_samples
-        total_samples += n_samples
-        print(f"  Kept: {n_samples:,} samples")
+        all_dataframes.append(combined_df)
+        attack_summary[attack_type] = len(combined_df)
+        total_samples += len(combined_df)
     
     if len(all_dataframes) == 0:
         print("\nError: No data was processed!")
