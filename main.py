@@ -435,8 +435,8 @@ if __name__ == "__main__":
                        help='Path to the dataset (CSV or Parquet)')
     parser.add_argument('--no-optimize', action='store_true',
                        help='Skip hyperparameter optimization (uses pre-optimized params)')
-    parser.add_argument('--optimize-dae', action='store_true',
-                       help='Optimize DAE even when --no-optimize is used')
+    parser.add_argument('--no-optimize-dae', action='store_true',
+                       help='Skip DAE optimization only (still optimize CNN/MLP/LSTM)')
     parser.add_argument('--no-dae', action='store_true',
                        help='Skip DAE dimensionality reduction')
     parser.add_argument('--no-smote', action='store_true',
@@ -446,10 +446,10 @@ if __name__ == "__main__":
     
     # Determine DAE optimization
     optimize_dae_flag = None
-    if args.optimize_dae:
-        optimize_dae_flag = True  # Force DAE optimization
+    if args.no_optimize_dae:
+        optimize_dae_flag = False  # Skip DAE optimization only
     elif args.no_optimize:
-        optimize_dae_flag = False  # Skip DAE optimization when --no-optimize
+        optimize_dae_flag = False  # Skip all optimization including DAE
     
     results, exp_dir = main(
         data_path=args.data,
