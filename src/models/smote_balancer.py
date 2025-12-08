@@ -203,5 +203,5 @@ class SMOTEBalancer:
             
         except Exception as e:
             print(f"Error during class-specific resampling: {e}")
-            print("Falling back to standard borderline-SMOTE")
-            return self.balance_data(X, y, method='borderline', k_neighbors=5)
+            print("Falling back to standard borderline-SMOTE with 'auto' sampling strategy")
+            return self.balance_data(X, y, method='borderline', k_neighbors=5, sampling_strategy='auto')
