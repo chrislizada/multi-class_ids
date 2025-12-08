@@ -28,7 +28,7 @@ from src.models import (
 from src.utils import MetricsCalculator, calculate_class_weights
 
 
-def main(data_path, optimize_hyperparams=True, use_dae=True, use_smote=True):
+def main(data_path, optimize_hyperparams=True, optimize_dae=None, use_dae=True, use_smote=True):
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     experiment_dir = Config.RESULTS_DIR / f"experiment_{timestamp}"
     experiment_dir.mkdir(parents=True, exist_ok=True)
@@ -76,13 +76,18 @@ def main(data_path, optimize_hyperparams=True, use_dae=True, use_smote=True):
         
         dae = DenoisingAutoencoder(input_dim=X_train.shape[1], config=Config.DAE_CONFIG)
         
-        if optimize_hyperparams:
+        # Determine if DAE should be optimized
+        should_optimize_dae = optimize_dae if optimize_dae is not None else optimize_hyperparams
+        
+        if should_optimize_dae:
             dae.optimize_hyperparameters(X_train, X_val, n_trials=Config.OPTIMIZATION_CONFIG['n_trials'])
         else:
+            # Use best parameters from previous optimization (Trial 3)
+            print("Using pre-optimized DAE hyperparameters")
             dae.build_autoencoder(
-                encoder_layers=[512, 256],
-                latent_dim=64,
-                dropout_rate=0.3,
+                encoder_layers=[1024, 512, 256],
+                latent_dim=32,
+                dropout_rate=0.2,
                 learning_rate=0.001
             )
             dae.train(X_train, X_val, noise_factor=0.2, batch_size=128, 
@@ -429,7 +434,9 @@ if __name__ == "__main__":
     parser.add_argument('--data', type=str, required=True, 
                        help='Path to the dataset (CSV or Parquet)')
     parser.add_argument('--no-optimize', action='store_true',
-                       help='Skip hyperparameter optimization')
+                       help='Skip hyperparameter optimization (uses pre-optimized params)')
+    parser.add_argument('--optimize-dae', action='store_true',
+                       help='Optimize DAE even when --no-optimize is used')
     parser.add_argument('--no-dae', action='store_true',
                        help='Skip DAE dimensionality reduction')
     parser.add_argument('--no-smote', action='store_true',
@@ -437,9 +444,17 @@ if __name__ == "__main__":
     
     args = parser.parse_args()
     
+    # Determine DAE optimization
+    optimize_dae_flag = None
+    if args.optimize_dae:
+        optimize_dae_flag = True  # Force DAE optimization
+    elif args.no_optimize:
+        optimize_dae_flag = False  # Skip DAE optimization when --no-optimize
+    
     results, exp_dir = main(
         data_path=args.data,
         optimize_hyperparams=not args.no_optimize,
+        optimize_dae=optimize_dae_flag,
         use_dae=not args.no_dae,
         use_smote=not args.no_smote
     )
