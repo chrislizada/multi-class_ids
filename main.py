@@ -120,7 +120,17 @@ def main(data_path, optimize_hyperparams=True, optimize_dae=None, use_dae=True, 
         X_val_encoded = dae.encode(X_val)
         X_test_encoded = dae.encode(X_test)
         
-        dae.save(experiment_dir / 'dae')
+        # Save DAE only if it was trained (not loaded)
+        if not load_dae_path:
+            dae.save(experiment_dir / 'dae')
+        else:
+            # Just save the encoder and params for loaded DAE
+            import shutil
+            dae_save_dir = experiment_dir / 'dae'
+            dae_save_dir.mkdir(parents=True, exist_ok=True)
+            shutil.copy(Path(load_dae_path) / 'encoder.h5', dae_save_dir / 'encoder.h5')
+            if (Path(load_dae_path) / 'best_params.pkl').exists():
+                shutil.copy(Path(load_dae_path) / 'best_params.pkl', dae_save_dir / 'best_params.pkl')
         
         print(f"\nDimensionality reduced: {X_train.shape[1]} -> {X_train_encoded.shape[1]}")
         
