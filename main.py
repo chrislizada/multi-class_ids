@@ -28,7 +28,7 @@ from src.models import (
 from src.utils import MetricsCalculator, calculate_class_weights
 
 
-def main(data_path, optimize_hyperparams=True, optimize_dae=None, use_dae=True, use_smote=True):
+def main(data_path, optimize_hyperparams=True, optimize_dae=None, use_dae=True, use_smote=True, load_dae_path=None):
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     experiment_dir = Config.RESULTS_DIR / f"experiment_{timestamp}"
     experiment_dir.mkdir(parents=True, exist_ok=True)
@@ -76,10 +76,33 @@ def main(data_path, optimize_hyperparams=True, optimize_dae=None, use_dae=True, 
         
         dae = DenoisingAutoencoder(input_dim=X_train.shape[1], config=Config.DAE_CONFIG)
         
-        # Determine if DAE should be optimized
-        should_optimize_dae = optimize_dae if optimize_dae is not None else optimize_hyperparams
+        # Check if loading pre-trained DAE
+        if load_dae_path:
+            from pathlib import Path
+            import tensorflow as tf
+            
+            print(f"Loading pre-trained DAE from: {load_dae_path}")
+            dae_path = Path(load_dae_path)
+            
+            if not dae_path.exists():
+                raise ValueError(f"DAE path does not exist: {load_dae_path}")
+            
+            # Load encoder
+            encoder_path = dae_path / 'encoder.h5'
+            if encoder_path.exists():
+                dae.encoder = tf.keras.models.load_model(encoder_path)
+                print("Loaded pre-trained encoder")
+            else:
+                raise ValueError(f"Encoder not found at: {encoder_path}")
+            
+            # Load best params if available
+            params_path = dae_path / 'best_params.pkl'
+            if params_path.exists():
+                dae.best_params = joblib.load(params_path)
+                print(f"Loaded DAE parameters: {dae.best_params}")
         
-        if should_optimize_dae:
+        # Determine if DAE should be optimized
+        elif optimize_dae if optimize_dae is not None else optimize_hyperparams:
             dae.optimize_hyperparameters(X_train, X_val, n_trials=Config.OPTIMIZATION_CONFIG['n_trials'])
         else:
             # Use best parameters from previous optimization (Trial 3)
@@ -437,6 +460,8 @@ if __name__ == "__main__":
                        help='Skip hyperparameter optimization (uses pre-optimized params)')
     parser.add_argument('--no-optimize-dae', action='store_true',
                        help='Skip DAE optimization only (still optimize CNN/MLP/LSTM)')
+    parser.add_argument('--load-dae', type=str, default=None,
+                       help='Path to pre-trained DAE directory (e.g., results/experiment_*/dae/)')
     parser.add_argument('--no-dae', action='store_true',
                        help='Skip DAE dimensionality reduction')
     parser.add_argument('--no-smote', action='store_true',
@@ -456,5 +481,6 @@ if __name__ == "__main__":
         optimize_hyperparams=not args.no_optimize,
         optimize_dae=optimize_dae_flag,
         use_dae=not args.no_dae,
-        use_smote=not args.no_smote
+        use_smote=not args.no_smote,
+        load_dae_path=args.load_dae
     )
