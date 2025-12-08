@@ -400,14 +400,15 @@ SMOTE_CONFIG = {
 
 The dataset contains 132 CSV files across 8 attack categories with ~5-6 million samples total. Three merge scripts are provided:
 
-**1. Recommended: Sample-Limited Merge (10% sampling)**
+**1. Recommended: Sample-Limited Merge (5% sampling)**
 ```bash
-python merge_dataset_sampled.py
+python merge_dataset_sampled.py --sample-fraction 0.05
 ```
-- Samples 10% from each CSV file individually (memory-efficient)
-- Output: ~540K samples total
+- Samples 5% from each CSV file individually (memory-efficient)
+- Output: ~1.39M samples total
 - Prevents out-of-memory errors on limited hardware
 - Maintains class distribution
+- Faster training times
 
 **2. Memory-Efficient Merge (Chunked Processing)**
 ```bash
@@ -427,14 +428,14 @@ python merge_dataset.py
 
 **Adjusting sample fraction:**
 ```bash
-# 5% sampling (~270K samples)
+# 5% sampling (~1.39M samples) - Recommended for faster training
 python merge_dataset_sampled.py --sample-fraction 0.05
 
-# 20% sampling (~1.08M samples)
-python merge_dataset_sampled.py --sample-fraction 0.2
+# 10% sampling (~2.78M samples) - More data, longer training
+python merge_dataset_sampled.py --sample-fraction 0.10
 
-# 50% sampling (~2.7M samples)
-python merge_dataset_sampled.py --sample-fraction 0.5
+# 20% sampling (~5.56M samples) - Requires significant resources
+python merge_dataset_sampled.py --sample-fraction 0.2
 ```
 
 ## Performance Metrics
@@ -458,10 +459,25 @@ All models are evaluated using:
 Performance metrics will be generated after training on the CIC IoT-DIAD 2024 dataset.
 
 ### Dataset Configuration
-- **Sampling**: 10% stratified sampling per attack class (~540K samples)
-- **Attack Classes**: 8 categories (Benign, BruteForce, DDoS, DoS, Mirai, Recon, Spoofing, Web-Based)
-- **Features**: 84 flow-based features + engineered statistical features
-- **Class Balancing**: Borderline-SMOTE / ADASYN applied to minority classes
+- **Sampling**: 5% stratified sampling per attack class (configurable via `--sample-fraction`)
+- **Total Samples**: ~1.39M samples after 5% sampling
+- **Attack Classes**: 8 categories with natural class imbalance
+  - DoS: ~1,157,191 samples (83.22%) - Highly dominant
+  - DDoS: ~173,930 samples (12.51%)
+  - Recon: ~22,108 samples (1.59%)
+  - Benign: ~19,916 samples (1.43%)
+  - Mirai: ~8,723 samples (0.63%)
+  - Spoofing: ~7,861 samples (0.57%)
+  - Web-Based: ~566 samples (0.04%) - Extremely rare
+  - BruteForce: ~181 samples (0.01%) - Extremely rare
+- **Features**: 62 features after preprocessing
+  - Original: 84 flow-based features
+  - Dropped: 6 identifier columns (Flow ID, IPs, Ports, Timestamp)
+  - Added: 27 statistical features (std, variance, CV, log transforms)
+  - Removed: 10 constant features + 32 highly correlated features
+  - Final: 62 numerical features
+- **Class Balancing**: Borderline-SMOTE / ADASYN applied to minority classes (BruteForce, Web-Based, Spoofing, Mirai, Benign, Recon)
+- **Optimization Trials**: 5 trials per model (reduced from 50 for faster training)
 
 ### Models to be Evaluated
 
@@ -483,12 +499,29 @@ All experiments will report:
 - **Confusion Matrix** - Detailed per-class performance
 - **Per-Class Metrics** - Individual F1, precision, recall for each attack type
 
+### Training Time Estimates
+
+**Hardware**: EC2 g4dn.2xlarge (Tesla T4 GPU, 5% sampling, 5 trials)
+- **DAE Optimization**: ~1-1.5 hours (5 trials)
+- **SMOTE Balancing**: ~5-10 minutes
+- **CNN Training**: ~15-20 minutes (5 trials)
+- **MLP Training**: ~15-20 minutes (5 trials)
+- **LSTM Training**: ~20-30 minutes (5 trials)
+- **Ensemble Training**: ~5-10 minutes
+- **Total Time**: ~2.5-3 hours for full pipeline with optimization
+- **Cost**: ~$1.90-2.25 (on-demand), ~$0.55-0.90 (spot)
+
+**With CPU only** (no GPU): ~8-12 hours
+
+**Fast Mode** (--no-optimize): ~30-45 minutes total
+
 ### Output Location
 
 Results are saved in `results/experiment_YYYYMMDD_HHMMSS/`:
 - `summary_results.csv` - Model comparison table
 - `cnn/`, `mlp/`, `lstm/`, `ensemble/` - Per-model metrics and visualizations
 - Confusion matrices, ROC curves, classification reports
+- Train/validation/test split: 60% / 20% / 20%
 
 ## Bug Fixes & Improvements
 

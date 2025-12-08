@@ -105,7 +105,7 @@ class Config:
     
     OPTIMIZATION_CONFIG = {
         'method': 'optuna',
-        'n_trials': 50,
+        'n_trials': 5,
         'n_jobs': -1,
         'timeout': 3600
     }
