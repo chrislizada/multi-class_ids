@@ -499,6 +499,19 @@ Performance metrics will be generated after training on the CIC IoT-DIAD 2024 da
 - Learning rate: 0.001
 - Batch size: 128
 - Validation loss: 1.12e+12
+- Dimensionality reduction: 62 features → 32 features
+
+**SMOTE Balancing Strategy**
+- Method: Borderline-SMOTE (class-specific)
+- Target: 50% of majority class (DoS: 694,310 samples)
+- Minority classes upsampled to: 347,155 samples each
+- Classes balanced:
+  - Benign: 11,948 → 347,155 (+335,207 synthetic)
+  - BruteForce: 108 → 347,155 (+347,047 synthetic)
+  - Mirai: 5,231 → 347,155 (+341,924 synthetic)
+  - Recon: 13,264 → 347,155 (+333,891 synthetic)
+  - Spoofing: 4,716 → 347,155 (+342,439 synthetic)
+  - Web-Based: 339 → 347,155 (+346,816 synthetic)
 
 **Note:** CNN, MLP, LSTM, and Ensemble hyperparameters will be updated after training completes.
 
