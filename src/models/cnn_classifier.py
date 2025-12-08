@@ -22,9 +22,12 @@ class FocalLoss(keras.losses.Loss):
     
     def call(self, y_true, y_pred):
         # Convert sparse labels to one-hot if needed
-        if len(y_true.shape) == 1 or y_true.shape[-1] == 1:
+        y_true = tf.cast(y_true, tf.float32)
+        if len(y_true.shape) == 1:
             y_true = tf.one_hot(tf.cast(y_true, tf.int32), depth=y_pred.shape[-1])
-            y_true = tf.squeeze(y_true)
+        elif y_true.shape[-1] == 1:
+            y_true = tf.squeeze(y_true, axis=-1)
+            y_true = tf.one_hot(tf.cast(y_true, tf.int32), depth=y_pred.shape[-1])
         
         if self.from_logits:
             y_pred = tf.nn.softmax(y_pred, axis=-1)
