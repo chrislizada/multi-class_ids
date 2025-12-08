@@ -483,10 +483,24 @@ Performance metrics will be generated after training on the CIC IoT-DIAD 2024 da
 
 | Model | Description | Key Features |
 |-------|-------------|--------------|
+| **DAE** | Denoising Autoencoder | Dimensionality reduction: 62 → 32 features |
 | **MLP** | Multi-Layer Perceptron | Residual connections, batch normalization, 3-4 hidden layers |
 | **1D-CNN** | Convolutional Neural Network | Multi-kernel (3x3, 5x5, 7x7), parallel feature extraction |
 | **BiLSTM+Attention** | Bidirectional LSTM | Self-attention mechanism, recurrent dropout |
 | **Ensemble** | Stacking ensemble | XGBoost meta-learner combining CNN+MLP+LSTM predictions |
+
+### Optimized Hyperparameters (5% Dataset, 5 Trials)
+
+**Denoising Autoencoder (DAE)**
+- Latent dimensions: 32
+- Encoder layers: [1024, 512, 256]
+- Noise factor: 0.2
+- Dropout rate: 0.2
+- Learning rate: 0.001
+- Batch size: 128
+- Validation loss: 1.12e+12
+
+**Note:** CNN, MLP, LSTM, and Ensemble hyperparameters will be updated after training completes.
 
 ### Evaluation Metrics
 
