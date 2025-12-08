@@ -77,7 +77,7 @@ def main(data_path, optimize_hyperparams=True, use_dae=True, use_smote=True):
         dae = DenoisingAutoencoder(input_dim=X_train.shape[1], config=Config.DAE_CONFIG)
         
         if optimize_hyperparams:
-            dae.optimize_hyperparameters(X_train, X_val, n_trials=20)
+            dae.optimize_hyperparameters(X_train, X_val, n_trials=Config.OPTIMIZATION_CONFIG['n_trials'])
         else:
             dae.build_autoencoder(
                 encoder_layers=[512, 256],
@@ -146,7 +146,7 @@ def main(data_path, optimize_hyperparams=True, use_dae=True, use_smote=True):
     
     if optimize_hyperparams:
         cnn.optimize_hyperparameters(X_train, y_train, X_val, y_val, 
-                                    class_weight=class_weights, n_trials=20)
+                                    class_weight=class_weights, n_trials=Config.OPTIMIZATION_CONFIG['n_trials'])
     else:
         cnn.build_model(filters=[64, 128, 256], kernel_sizes=[3, 5, 7],
                        dropout_rate=0.4, dense_units=[256, 128], learning_rate=0.001)
@@ -208,7 +208,7 @@ def main(data_path, optimize_hyperparams=True, use_dae=True, use_smote=True):
     
     if optimize_hyperparams:
         mlp.optimize_hyperparameters(X_train, y_train, X_val, y_val, 
-                                    class_weight=class_weights, n_trials=20)
+                                    class_weight=class_weights, n_trials=Config.OPTIMIZATION_CONFIG['n_trials'])
     else:
         mlp.build_model(hidden_layers=[512, 256, 128], dropout_rate=0.4,
                        learning_rate=0.001, activation='relu', batch_norm=True)
@@ -270,7 +270,7 @@ def main(data_path, optimize_hyperparams=True, use_dae=True, use_smote=True):
     
     if optimize_hyperparams:
         lstm.optimize_hyperparameters(X_train, y_train, X_val, y_val, 
-                                     class_weight=class_weights, n_trials=15)
+                                     class_weight=class_weights, n_trials=Config.OPTIMIZATION_CONFIG['n_trials'])
     else:
         lstm.build_model(units=[256, 128], dropout_rate=0.4, recurrent_dropout=0.2,
                         learning_rate=0.001, bidirectional=True, use_attention=True)
