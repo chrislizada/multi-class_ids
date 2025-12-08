@@ -176,11 +176,17 @@ class SMOTEBalancer:
         print(f"Minority classes identified: {minority_classes}")
         
         sampling_strategy = {}
+        max_count = max(class_dist.values())
+        target_count = int(max_count * 0.5)  # Target 50% of majority class
+        
         for cls in minority_classes:
             current_count = class_dist[cls]
-            target_count = int(np.median(list(class_dist.values())))
-            sampling_strategy[cls] = target_count
-            print(f"  Class {cls}: {current_count} -> {target_count}")
+            # Only upsample if target is greater than current
+            if target_count > current_count:
+                sampling_strategy[cls] = target_count
+                print(f"  Class {cls}: {current_count} -> {target_count}")
+            else:
+                print(f"  Class {cls}: {current_count} (no upsampling needed)")
         
         self.sampler = BorderlineSMOTE(
             sampling_strategy=sampling_strategy,
@@ -203,5 +209,5 @@ class SMOTEBalancer:
             
         except Exception as e:
             print(f"Error during class-specific resampling: {e}")
-            print("Falling back to standard borderline-SMOTE with 'auto' sampling strategy")
-            return self.balance_data(X, y, method='borderline', k_neighbors=5, sampling_strategy='auto')
+            print("Falling back to standard borderline-SMOTE with 'not majority' sampling strategy")
+            return self.balance_data(X, y, method='borderline', k_neighbors=5, sampling_strategy='not majority')
