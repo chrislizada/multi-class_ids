@@ -54,21 +54,34 @@ class CNNClassifier:
         self.best_params = None
         
     def build_model(self, filters=[64, 128, 256], kernel_sizes=[3, 5, 7],
-                   dropout_rate=0.4, dense_units=[256, 128], learning_rate=0.001):
+                   dropout_rate=0.2, dense_units=[256, 128], learning_rate=0.0005):
+        from tensorflow.keras.regularizers import l2
+        
         inputs = layers.Input(shape=(self.input_dim, 1))
         
         conv_outputs = []
         for kernel_size in kernel_sizes:
             x = inputs
-            for filter_size in filters:
+            for i, filter_size in enumerate(filters):
+                residual = x
+                
                 x = layers.Conv1D(
                     filters=filter_size,
                     kernel_size=kernel_size,
                     padding='same',
-                    activation='relu'
+                    activation=None,
+                    kernel_regularizer=l2(0.001)
                 )(x)
                 x = layers.BatchNormalization()(x)
-                x = layers.MaxPooling1D(pool_size=2)(x)
+                x = layers.Activation('relu')(x)
+                
+                # Add residual connection if dimensions match
+                if i > 0 and residual.shape[-1] == filter_size:
+                    x = layers.Add()([x, residual])
+                
+                # Only pool first 2 layers
+                if i < 2:
+                    x = layers.MaxPooling1D(pool_size=2)(x)
             
             x = layers.GlobalMaxPooling1D()(x)
             conv_outputs.append(x)
@@ -89,12 +102,15 @@ class CNNClassifier:
         
         model = Model(inputs, outputs, name='1d_cnn_classifier')
         
-        optimizer = keras.optimizers.Adam(learning_rate=learning_rate)
+        optimizer = keras.optimizers.Adam(
+            learning_rate=learning_rate,
+            clipnorm=1.0
+        )
         
         if self.use_focal_loss:
             loss = FocalLoss(alpha=0.25, gamma=2.0)
         else:
-            loss = 'sparse_categorical_crossentropy'
+            loss = keras.losses.SparseCategoricalCrossentropy(label_smoothing=0.1)
         
         model.compile(
             optimizer=optimizer,
@@ -113,7 +129,8 @@ class CNNClassifier:
         
         callbacks = [
             EarlyStopping(
-                monitor='val_loss' if X_val is not None else 'loss',
+                monitor='val_accuracy' if X_val is not None else 'accuracy',
+                mode='max',
                 patience=patience,
                 restore_best_weights=True,
                 verbose=1
@@ -121,8 +138,8 @@ class CNNClassifier:
             ReduceLROnPlateau(
                 monitor='val_loss' if X_val is not None else 'loss',
                 factor=0.5,
-                patience=int(patience/3),
-                min_lr=1e-7,
+                patience=10,
+                min_lr=1e-4,
                 verbose=1
             )
         ]
