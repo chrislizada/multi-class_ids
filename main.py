@@ -186,8 +186,8 @@ def main(data_path, optimize_hyperparams=True, optimize_dae=None, use_dae=True, 
         cnn.optimize_hyperparameters(X_train, y_train, X_val, y_val, 
                                     class_weight=class_weights, n_trials=Config.OPTIMIZATION_CONFIG['n_trials'])
     else:
-        cnn.build_model(filters=[64, 128, 256], kernel_sizes=[3, 5, 7],
-                       dropout_rate=0.4, dense_units=[256, 128], learning_rate=0.001)
+        cnn.build_model(filters=[64, 128, 256], kernel_sizes=[5, 7, 9],
+                       dropout_rate=0.3, dense_units=[256, 128], learning_rate=0.0001)
         cnn.train(X_train, y_train, X_val, y_val, batch_size=64, 
                  epochs=100, patience=15, class_weight=class_weights)
     
