@@ -235,11 +235,31 @@ class MetricsCalculator:
         return report_text
 
 
-def calculate_class_weights(y):
+def calculate_class_weights(y, max_weight=20.0):
+    """
+    Calculate class weights with optional capping to prevent extreme weights.
+    
+    Args:
+        y: Target labels
+        max_weight: Maximum weight cap (default: 20.0)
+                   Prevents extreme weights for very rare classes
+    
+    Returns:
+        Dictionary of class weights
+    """
     from sklearn.utils.class_weight import compute_class_weight
     
     classes = np.unique(y)
     weights = compute_class_weight('balanced', classes=classes, y=y)
-    class_weight_dict = dict(zip(classes, weights))
+    
+    # Cap extreme weights
+    weights_capped = np.clip(weights, None, max_weight)
+    
+    class_weight_dict = dict(zip(classes, weights_capped))
+    
+    # Print capping info if any weights were capped
+    for cls, (orig, capped) in enumerate(zip(weights, weights_capped)):
+        if orig > max_weight:
+            print(f"  Capped class {cls} weight: {orig:.2f} -> {capped:.2f}")
     
     return class_weight_dict

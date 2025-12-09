@@ -104,7 +104,13 @@ class LSTMClassifier:
     
     def build_model(self, units=[256, 128], dropout_rate=0.4, recurrent_dropout=0.2,
                    learning_rate=0.001, bidirectional=True, use_attention=True):
-        input_shape = (self.timesteps, -1)
+        # Calculate features per timestep based on input_dim
+        n_features = self.input_dim
+        if n_features % self.timesteps != 0:
+            pad_size = self.timesteps - (n_features % self.timesteps)
+            n_features = n_features + pad_size
+        features_per_timestep = n_features // self.timesteps
+        input_shape = (self.timesteps, features_per_timestep)
         inputs = layers.Input(shape=input_shape)
         
         x = inputs
