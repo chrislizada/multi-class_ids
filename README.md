@@ -472,28 +472,62 @@ All models are evaluated using:
 
 Performance metrics will be generated after training on the CIC IoT-DIAD 2024 dataset.
 
-### Dataset Configuration
+### Dataset Configuration (Packet-Based - 5% Sampling)
 - **Dataset Type**: Packet-Based Features (RECOMMENDED)
-- **Sampling**: 5% per CSV file (configurable via `--sample-fraction`)
-- **Total Samples**: ~500K-1M samples after 5% sampling (varies by download)
-- **Attack Classes**: 33+ granular attack types with better class balance
-- **Features**: 100+ packet-level statistics
-  - DoS: ~1,157,191 samples (83.22%) - Highly dominant
-  - DDoS: ~173,930 samples (12.51%)
-  - Recon: ~22,108 samples (1.59%)
-  - Benign: ~19,916 samples (1.43%)
-  - Mirai: ~8,723 samples (0.63%)
-  - Spoofing: ~7,861 samples (0.57%)
-  - Web-Based: ~566 samples (0.04%) - Extremely rare
-  - BruteForce: ~181 samples (0.01%) - Extremely rare
-- **Features**: 62 features after preprocessing
-  - Original: 84 flow-based features
-  - Dropped: 6 identifier columns (Flow ID, IPs, Ports, Timestamp)
-  - Added: 27 statistical features (std, variance, CV, log transforms)
-  - Removed: 10 constant features + 32 highly correlated features
-  - Final: 62 numerical features
-- **Class Balancing**: Borderline-SMOTE / ADASYN applied to minority classes (BruteForce, Web-Based, Spoofing, Mirai, Benign, Recon)
-- **Optimization Trials**: 5 trials per model (reduced from 50 for faster training)
+- **Sampling**: 5% per CSV file (from 180 CSV files)
+- **Total Samples**: 1,783,557 samples after merging
+- **Attack Classes**: 28 granular attack types
+- **Features After Preprocessing**: 96 numerical features
+  - Original: 136 columns (135 features + Label)
+  - Dropped: 7 identifier columns (stream, MAC/IP addresses, ports)
+  - Dropped: High-cardinality categorical columns (>100 unique values)
+  - Added: Statistical features (packet length std/range/CV, IAT stats, rate aggregations, squared/log transforms)
+  - Removed: Constant features and highly correlated features (>0.95 correlation)
+  - Final: 96 numerical features for model input
+
+**Class Distribution (28 Attack Types):**
+- **IoT Malware**:
+  - Mirai-greip_flood: 304,852 (17.09%) - Largest class
+  - Backdoor_Malware: 1,667 (0.09%)
+- **DDoS Variants** (59.99% total):
+  - DDoS-ICMP_Fragmentation: 288,682 (16.19%)
+  - DDoS-UDP_Flood: 219,143 (12.29%)
+  - DDoS-UDP_Fragmentation: 185,271 (10.39%)
+  - DDoS-ACK_Fragmentation: 184,844 (10.36%)
+  - DDoS-SynonymousIP_Flood: 138,219 (7.75%)
+  - DDoS-TCP_Flood: 78,421 (4.40%)
+  - DDoS-HTTP_Flood: 14,517 (0.81%)
+  - DDoS-SlowLoris: 14,429 (0.81%)
+- **DoS Variants** (9.83% total):
+  - DoS-UDP_Flood: 77,856 (4.37%)
+  - DoS-TCP_Flood: 46,645 (2.62%)
+  - DoS-SYN_Flood: 34,962 (1.96%)
+  - DoS-HTTP_Flood: 15,701 (0.88%)
+- **Reconnaissance** (2.49% total):
+  - Recon-OSScan: 14,595 (0.82%)
+  - Recon-HostDiscovery: 14,418 (0.81%)
+  - Recon-PortScan: 14,331 (0.80%)
+  - Recon-PingSweep: 1,130 (0.06%)
+- **Web Attacks** (1.19% total):
+  - VulnerabilityScan: 12,946 (0.73%)
+  - BrowserHijacking: 2,963 (0.17%)
+  - CommandInjection: 2,781 (0.16%)
+  - SqlInjection: 2,631 (0.15%)
+  - XSS: 2,005 (0.11%)
+  - Uploading_Attack: 646 (0.04%)
+- **Network Attacks**:
+  - MITM-ArpSpoofing: 29,389 (1.65%)
+  - DNS_Spoofing: 14,801 (0.83%)
+  - DictionaryBruteForce: 6,573 (0.37%)
+- **Benign Traffic**: 59,139 (3.32%)
+
+**Train/Validation/Test Split:**
+- Training: 1,070,133 samples (60%)
+- Validation: 356,712 samples (20%)
+- Test: 356,712 samples (20%)
+
+**Class Balancing**: Borderline-SMOTE / ADASYN applied to minority classes
+**Optimization Trials**: 5 trials per model (DAE, CNN, MLP, LSTM)
 
 ### Models to be Evaluated
 
@@ -507,30 +541,54 @@ Performance metrics will be generated after training on the CIC IoT-DIAD 2024 da
 
 ### Optimized Hyperparameters (5% Dataset, 5 Trials)
 
-**Denoising Autoencoder (DAE)**
-- Latent dimensions: 32
-- Encoder layers: [1024, 512, 256]
-- Noise factor: 0.2
-- Dropout rate: 0.2
-- Learning rate: 0.001
-- Batch size: 128
-- Validation loss: 1.12e+12
-- Dimensionality reduction: 62 features → 32 features
+**Denoising Autoencoder (DAE) - Packet-Based Dataset**
+- Latent dimensions: 256 (expansion from 96 input features)
+- Architecture: Optimized via Optuna (5 trials)
+- Noise factor: Optimized
+- Dropout rate: Optimized
+- Learning rate: Optimized
+- **Dimensionality expansion**: 96 features → 256 features
+- Rationale: Complex 28-class problem benefits from expanded latent space
 
-**SMOTE Balancing Strategy (Improved v2)**
+**SMOTE Balancing Strategy (Packet-Based Dataset)**
 - Method: Borderline-SMOTE (class-specific)
-- Target: 25% of majority class (DoS: 694,310 samples) - **Reduced from 50%**
-- Minority classes upsampled to: ~173,578 samples each
-- Rationale: Less synthetic noise, more focus on real samples
-- Classes balanced:
-  - Benign: 11,948 → 173,578 (+161,630 synthetic)
-  - BruteForce: 108 → 173,578 (+173,470 synthetic)
-  - Mirai: 5,231 → 173,578 (+168,347 synthetic)
-  - Recon: 13,264 → 173,578 (+160,314 synthetic)
-  - Spoofing: 4,716 → 173,578 (+168,862 synthetic)
-  - Web-Based: 339 → 173,578 (+173,239 synthetic)
-  - DDoS: 104,348 (not upsampled - already >25% threshold)
-  - DoS: 694,310 (majority class - not modified)
+- Target: 45,727 samples per minority class (~25% of majority class Mirai: 182,911)
+- **17 minority classes** balanced (60.7% of all classes)
+- **11 majority classes** unchanged (Mirai, DDoS variants, DoS variants)
+
+**Classes Balanced (17 total):**
+- Uploading_Attack (class 25): 388 → 45,727 (+45,339 synthetic, 118x)
+- Recon-PingSweep (class 22): 678 → 45,727 (+45,049 synthetic, 67x)
+- Backdoor_Malware (class 0): 1,001 → 45,727 (+44,726 synthetic, 46x)
+- XSS (class 27): 1,203 → 45,727 (+44,524 synthetic, 38x)
+- BrowserHijacking (class 24): 1,579 → 45,727 (+44,148 synthetic, 29x)
+- CommandInjection (class 3): 1,669 → 45,727 (+44,058 synthetic, 27x)
+- SqlInjection (class 2): 1,777 → 45,727 (+43,950 synthetic, 26x)
+- DictionaryBruteForce (class 13): 3,943 → 45,727 (+41,784 synthetic, 11.6x)
+- VulnerabilityScan (class 26): 7,768 → 45,727 (+37,959 synthetic, 5.9x)
+- DDoS-SlowLoris (class 7): 8,657 → 45,727 (+37,070 synthetic, 5.3x)
+- Recon-PortScan (class 20): 8,650 → 45,727 (+37,077 synthetic, 5.3x)
+- DDoS-HTTP_Flood (class 5): 8,710 → 45,727 (+37,017 synthetic, 5.3x)
+- Recon-HostDiscovery (class 21): 8,757 → 45,727 (+36,970 synthetic, 5.2x)
+- Recon-OSScan (class 23): 8,599 → 45,727 (+37,128 synthetic, 5.3x)
+- DNS_Spoofing (class 12): 8,881 → 45,727 (+36,846 synthetic, 5.1x)
+- DoS-HTTP_Flood (class 14): 9,421 → 45,727 (+36,306 synthetic, 4.9x)
+- MITM-ArpSpoofing (class 18): 17,633 → 45,727 (+28,094 synthetic, 2.6x)
+
+**Classes NOT Balanced (11 majority classes):**
+- Mirai-greip_flood (class 19): 182,911 samples (majority class)
+- DDoS-ICMP_Fragmentation (class 6): 173,210 samples
+- DDoS-UDP_Flood (class 8): 131,486 samples
+- DDoS-UDP_Fragmentation (class 11): 111,163 samples
+- DDoS-ACK_Fragmentation (class 4): 110,906 samples
+- DDoS-SynonymousIP_Flood (class 10): 82,932 samples
+- DoS-UDP_Flood (class 17): 46,714 samples
+- DDoS-TCP_Flood (class 9): 47,053 samples
+- BenignTraffic (class 1): 35,484 samples
+- DoS-TCP_Flood (class 16): 27,987 samples
+- DoS-SYN_Flood (class 15): 20,977 samples
+
+**Total Training Samples After SMOTE**: 1,748,094 samples (increased from 1,070,133)
 
 **1D-CNN Classifier (Improved v2)**
 - Filters: [64, 128, 256]
