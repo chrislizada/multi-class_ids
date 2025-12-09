@@ -22,7 +22,7 @@ class Config:
     N_FOLDS = 5
     
     ATTACK_CLASSES = [
-        'Benign', 'BruteForce', 'DDoS', 'Mirai', 
+        'Benign', 'BruteForce', 'DDoS', 'DoS', 'Mirai', 
         'Recon', 'Spoofing', 'Web-Based'
     ]
     N_CLASSES = len(ATTACK_CLASSES)
