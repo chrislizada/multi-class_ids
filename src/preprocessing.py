@@ -95,6 +95,10 @@ class DataPreprocessor:
         if len(self.categorical_columns) == 0:
             return df
         
+        # Convert all categorical columns to string to avoid mixed type errors
+        for col in self.categorical_columns:
+            df[col] = df[col].astype(str)
+        
         if fit:
             self.ohe = OneHotEncoder(sparse_output=False, handle_unknown='ignore')
             encoded = self.ohe.fit_transform(df[self.categorical_columns])
