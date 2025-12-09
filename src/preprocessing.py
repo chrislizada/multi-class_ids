@@ -265,12 +265,23 @@ class DataPreprocessor:
         # Drop high-cardinality identifier columns that shouldn't be encoded
         id_columns = ['Flow ID', 'Src IP', 'Dst IP', 'Src Port', 'Dst Port', 
                       'Timestamp', 'Flow_ID', 'Source_IP', 'Destination_IP',
-                      'Source_Port', 'Destination_Port']
+                      'Source_Port', 'Destination_Port', 'stream',
+                      'src_mac', 'dst_mac', 'src_ip', 'dst_ip', 'src_port', 'dst_port']
         
         columns_to_drop = [col for col in id_columns if col in df_features.columns]
         if columns_to_drop:
             print(f"Dropping identifier columns: {columns_to_drop}")
             df_features = df_features.drop(columns=columns_to_drop)
+        
+        # Drop high-cardinality categorical columns (>100 unique values)
+        # These would explode memory when one-hot encoded
+        for col in self.categorical_columns[:]:
+            if col in df_features.columns:
+                n_unique = df_features[col].nunique()
+                if n_unique > 100:
+                    print(f"Dropping high-cardinality categorical column: {col} ({n_unique:,} unique values)")
+                    df_features = df_features.drop(columns=[col])
+                    self.categorical_columns.remove(col)
         
         self.identify_column_types(df_features)
         
