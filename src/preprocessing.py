@@ -273,17 +273,23 @@ class DataPreprocessor:
             print(f"Dropping identifier columns: {columns_to_drop}")
             df_features = df_features.drop(columns=columns_to_drop)
         
+        # Identify column types FIRST
+        self.identify_column_types(df_features)
+        
         # Drop high-cardinality categorical columns (>100 unique values)
         # These would explode memory when one-hot encoded
-        for col in self.categorical_columns[:]:
+        categorical_to_drop = []
+        for col in self.categorical_columns:
             if col in df_features.columns:
                 n_unique = df_features[col].nunique()
                 if n_unique > 100:
                     print(f"Dropping high-cardinality categorical column: {col} ({n_unique:,} unique values)")
-                    df_features = df_features.drop(columns=[col])
-                    self.categorical_columns.remove(col)
+                    categorical_to_drop.append(col)
         
-        self.identify_column_types(df_features)
+        if categorical_to_drop:
+            df_features = df_features.drop(columns=categorical_to_drop)
+            self.categorical_columns = [c for c in self.categorical_columns if c not in categorical_to_drop]
+            print(f"Remaining categorical columns: {len(self.categorical_columns)}")
         
         df_features = self.encode_categorical_features(df_features, fit=fit)
         
