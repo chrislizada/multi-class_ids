@@ -51,7 +51,7 @@ class Config:
         'kernel_sizes': [[3, 5, 7], [5, 7, 9]],
         'dropout_rate': [0.3, 0.4, 0.5],
         'dense_units': [[256, 128], [512, 256]],
-        'learning_rate': [0.001, 0.0001],
+        'learning_rate': [0.0005, 0.0001],  # Lower LR to prevent NaN
         'batch_size': [64, 128],
         'epochs': 100,
         'patience': 15
@@ -60,7 +60,7 @@ class Config:
     MLP_CONFIG = {
         'hidden_layers': [[512, 256, 128], [1024, 512, 256], [1024, 512, 256, 128]],
         'dropout_rate': [0.3, 0.4, 0.5],
-        'learning_rate': [0.001, 0.0001, 0.00001],
+        'learning_rate': [0.0005, 0.0001, 0.00001],  # Lower LR to prevent NaN
         'batch_size': [64, 128, 256],
         'activation': ['relu', 'selu'],
         'batch_norm': [True, False],
@@ -72,7 +72,7 @@ class Config:
         'units': [[128, 64], [256, 128], [512, 256]],
         'dropout_rate': [0.3, 0.4, 0.5],
         'recurrent_dropout': [0.2, 0.3],
-        'learning_rate': [0.001, 0.0001],
+        'learning_rate': [0.0005, 0.0001],  # Lower LR to prevent NaN
         'batch_size': [64, 128],
         'use_attention': [True],
         'bidirectional': [True],

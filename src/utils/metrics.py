@@ -235,7 +235,7 @@ class MetricsCalculator:
         return report_text
 
 
-def calculate_class_weights(y, max_weight=20.0):
+def calculate_class_weights(y, max_weight=10.0):
     """
     Calculate class weights with optional capping to prevent extreme weights.
     
