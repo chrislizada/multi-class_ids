@@ -110,7 +110,7 @@ class CNNClassifier:
         if self.use_focal_loss:
             loss = FocalLoss(alpha=0.25, gamma=2.0)
         else:
-            loss = keras.losses.SparseCategoricalCrossentropy(label_smoothing=0.1)
+            loss = 'sparse_categorical_crossentropy'
         
         model.compile(
             optimizer=optimizer,
