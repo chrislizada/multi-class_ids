@@ -179,17 +179,17 @@ def main(data_path, optimize_hyperparams=True, optimize_dae=None, use_dae=True, 
         input_dim=X_train.shape[1],
         n_classes=Config.N_CLASSES,
         config=Config.CNN_CONFIG,
-        use_focal_loss=True
+        use_focal_loss=False  # Disabled focal loss for stability
     )
     
     if optimize_hyperparams:
         cnn.optimize_hyperparameters(X_train, y_train, X_val, y_val, 
                                     class_weight=class_weights, n_trials=Config.OPTIMIZATION_CONFIG['n_trials'])
     else:
-        cnn.build_model(filters=[64, 128, 256], kernel_sizes=[5, 7, 9],
-                       dropout_rate=0.3, dense_units=[256, 128], learning_rate=0.0001)
-        cnn.train(X_train, y_train, X_val, y_val, batch_size=64, 
-                 epochs=100, patience=15, class_weight=class_weights)
+        cnn.build_model(filters=[64, 128, 256], kernel_sizes=[3, 5, 7],
+                       dropout_rate=0.3, dense_units=[256, 128], learning_rate=0.001)
+        cnn.train(X_train, y_train, X_val, y_val, batch_size=128, 
+                 epochs=100, patience=25, class_weight=class_weights)
     
     y_test_pred_cnn = cnn.predict(X_test)
     y_test_proba_cnn = cnn.predict_proba(X_test)
@@ -241,17 +241,17 @@ def main(data_path, optimize_hyperparams=True, optimize_dae=None, use_dae=True, 
         input_dim=X_train.shape[1],
         n_classes=Config.N_CLASSES,
         config=Config.MLP_CONFIG,
-        use_focal_loss=True
+        use_focal_loss=False  # Disabled focal loss for stability
     )
     
     if optimize_hyperparams:
         mlp.optimize_hyperparameters(X_train, y_train, X_val, y_val, 
                                     class_weight=class_weights, n_trials=Config.OPTIMIZATION_CONFIG['n_trials'])
     else:
-        mlp.build_model(hidden_layers=[512, 256, 128], dropout_rate=0.4,
+        mlp.build_model(hidden_layers=[256, 128], dropout_rate=0.3,
                        learning_rate=0.001, activation='relu', batch_norm=True)
         mlp.train(X_train, y_train, X_val, y_val, batch_size=128, 
-                 epochs=100, patience=15, class_weight=class_weights)
+                 epochs=100, patience=25, class_weight=class_weights)
     
     y_test_pred_mlp = mlp.predict(X_test)
     y_test_proba_mlp = mlp.predict_proba(X_test)
@@ -303,17 +303,17 @@ def main(data_path, optimize_hyperparams=True, optimize_dae=None, use_dae=True, 
         input_dim=X_train.shape[1],
         n_classes=Config.N_CLASSES,
         config=Config.LSTM_CONFIG,
-        use_focal_loss=True
+        use_focal_loss=False  # Disabled focal loss for stability
     )
     
     if optimize_hyperparams:
         lstm.optimize_hyperparameters(X_train, y_train, X_val, y_val, 
                                      class_weight=class_weights, n_trials=Config.OPTIMIZATION_CONFIG['n_trials'])
     else:
-        lstm.build_model(units=[256, 128], dropout_rate=0.4, recurrent_dropout=0.2,
+        lstm.build_model(units=[128, 64], dropout_rate=0.3, recurrent_dropout=0.2,
                         learning_rate=0.001, bidirectional=True, use_attention=True)
-        lstm.train(X_train, y_train, X_val, y_val, batch_size=64, 
-                  epochs=100, patience=15, class_weight=class_weights)
+        lstm.train(X_train, y_train, X_val, y_val, batch_size=128, 
+                  epochs=100, patience=25, class_weight=class_weights)
     
     y_test_pred_lstm = lstm.predict(X_test)
     y_test_proba_lstm = lstm.predict_proba(X_test)

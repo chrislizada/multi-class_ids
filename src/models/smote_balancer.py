@@ -177,7 +177,7 @@ class SMOTEBalancer:
         
         sampling_strategy = {}
         max_count = max(class_dist.values())
-        target_count = int(max_count * 0.5)  # Target 50% of majority class
+        target_count = int(max_count * 0.25)  # Target 25% of majority class (reduced from 50%)
         
         for cls in minority_classes:
             current_count = class_dist[cls]
