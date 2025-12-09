@@ -78,6 +78,29 @@ def merge_packet_dataset(dataset_dir="data/ciciot_idad_2024_packet",
             
             original_count = len(df)
             
+            # Extract attack type from directory or filename
+            # If file is in subdirectory: use directory name as label
+            # If file is in root: extract from filename (e.g., BenignTraffic.csv -> BenignTraffic)
+            parent_dir = os.path.basename(os.path.dirname(csv_file))
+            
+            if parent_dir == os.path.basename(dataset_dir):
+                # File is in root directory
+                attack_type = file_name.replace('.csv', '')
+                # Remove trailing numbers (BenignTraffic1 -> BenignTraffic)
+                attack_type = ''.join([c for c in attack_type if not c.isdigit()])
+            else:
+                # File is in subdirectory - use directory name
+                attack_type = parent_dir
+            
+            # Drop existing label columns if present
+            if 'Label' in df.columns:
+                df = df.drop(columns=['Label'])
+            if 'label' in df.columns:
+                df = df.drop(columns=['label'])
+            
+            # Add Label column with attack type
+            df['Label'] = attack_type
+            
             # Sample 5% from this file
             n_samples = max(1, int(len(df) * sample_fraction))
             sampled = df.sample(n=n_samples, random_state=random_state)
@@ -86,27 +109,14 @@ def merge_packet_dataset(dataset_dir="data/ciciot_idad_2024_packet",
             total_original += original_count
             total_sampled += len(sampled)
             
-            # Track by attack type (from filename or directory)
-            attack_type = file_name.replace('.csv', '')
+            # Track by attack type
             if attack_type not in file_summary:
                 file_summary[attack_type] = {'files': 0, 'samples': 0}
             file_summary[attack_type]['files'] += 1
             file_summary[attack_type]['samples'] += len(sampled)
             
             print(f"  Sampled: {len(sampled):,} from {original_count:,} rows")
-            
-            # Show label distribution if available
-            label_col = None
-            if 'Label' in df.columns:
-                label_col = 'Label'
-            elif 'label' in df.columns:
-                label_col = 'label'
-            
-            if label_col:
-                unique_labels = df[label_col].unique()
-                if len(unique_labels) <= 3:
-                    print(f"  Labels: {', '.join(map(str, unique_labels))}")
-            
+            print(f"  Label: {attack_type}")
             print()
             
         except Exception as e:

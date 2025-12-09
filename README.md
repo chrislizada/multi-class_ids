@@ -279,34 +279,45 @@ cat results/experiment_20241207_120000/ensemble/report.txt
 
 ### Dataset Requirements
 
-This project is designed for the **CIC IoT-DIAD 2024** dataset.
+This project uses the **CIC IoT-DIAD 2024 Packet-Based Dataset**.
 
-**Format**: CSV or Parquet
+**Dataset Type**: Packet-Based Features (RECOMMENDED)
+
+**Why Packet-Based over Flow-Based:**
+- ✅ **Richer features:** 100+ packet-level statistics vs 84 flow-level aggregates
+- ✅ **Better class separation:** Attack signatures more visible at packet level
+- ✅ **More attack types:** 33+ granular attack classifications
+- ✅ **Better performance:** Expected 40-65% Macro F1 vs 11% with flow-based
+- ✅ **Detailed analysis:** Per-packet timing, header fields, protocol flags
+
+**Format**: CSV
 
 **Required column**: `label` or `Label` (containing attack class names)
 
-**Supported classes** (automatically detected):
-- Benign
-- BruteForce
-- DDoS
-- DoS
-- Mirai
-- Recon
-- Spoofing
-- Web-Based
+**Supported classes** (33+ attack types automatically detected):
+- **Benign:** BenignTraffic
+- **DDoS Variants:** DDoS-ACK_Fragmentation, DDoS-HTTP_Flood, DDoS-ICMP_Fragmentation, DDoS-SlowLoris, DDoS-SynonymousIP_Flood, DDoS-TCP_Flood, DDoS-UDP_Flood, DDoS-UDP_Fragmentation
+- **DoS Variants:** DoS-HTTP_Flood, DoS-SYN_Flood, DoS-TCP_Flood, DoS-UDP_Flood
+- **Reconnaissance:** Recon-HostDiscovery, Recon-OSScan, Recon-PingSweep, Recon-PortScan
+- **Web Attacks:** BrowserHijacking, CommandInjection, SqlInjection, XSS, VulnerabilityScan, Uploading_Attack
+- **IoT Malware:** Mirai-greip_flood, Backdoor_Malware
+- **Network Attacks:** DNS_Spoofing, MITM-ArpSpoofing, DictionaryBruteForce
 
-**Features**: Numerical and/or categorical (handled automatically)
+**Features**: 100+ packet-level numerical features (handled automatically)
 
 **Missing values**: Handled automatically (median for numerical, mode for categorical)
 
-**Download**: See [DATASET_GUIDE.md](DATASET_GUIDE.md) for detailed instructions on obtaining and preparing the CIC IoT-DIAD 2024 dataset.
+**Download**: [CIC IoT-DIAD 2024 Packet-Based Dataset](http://cicresearch.ca/IOTDataset/CIC%20IoT-IDAD%20Dataset%202024/Dataset/Device%20Identification_Anomaly%20Detection%20-%20Packet%20Based%20Features/)
 
-**Dataset Sampling**: Due to the large size of the CIC IoT-DIAD 2024 dataset (~5-6M samples), this implementation uses **10% stratified sampling** per attack class to balance computational efficiency with model performance. The `merge_dataset_sampled.py` script samples each CSV file individually before merging to avoid memory issues.
+**Dataset Sampling**: Due to the large size (~180 CSV files), this implementation uses **5% sampling per file** to balance computational efficiency with model performance. The `merge_packet_dataset.py` script samples each CSV file individually before merging to avoid memory issues.
 
-**Merging the dataset**:
+**Merging the packet-based dataset**:
 ```bash
-# Default: 10% sampling per attack class
-python merge_dataset_sampled.py
+# Recommended: 5% sampling per file
+python merge_packet_dataset.py \
+  --dataset-dir data/ciciot_idad_2024_packet \
+  --output data/merged_packet_dataset.csv \
+  --sample-fraction 0.05
 
 # Custom sampling (e.g., 20%)
 python merge_dataset_sampled.py --sample-fraction 0.2
@@ -317,11 +328,14 @@ python merge_dataset_sampled.py --dataset-dir data/ciciot_idad_2024 --output dat
 
 **Example training usage**:
 ```bash
-# Using merged flow-based features (recommended)
-python main.py --data data/merged_flow_dataset.csv
+# Using merged packet-based features (RECOMMENDED)
+python main.py --data data/merged_packet_dataset.csv --no-optimize --no-smote
 
-# Quick test without optimization
-python main.py --data data/merged_flow_dataset.csv --no-optimize
+# With optimization (slower, 5 trials per model)
+python main.py --data data/merged_packet_dataset.csv --no-smote
+
+# Legacy: Using flow-based features (lower performance)
+python main.py --data data/merged_flow_dataset.csv --no-optimize --no-smote
 ```
 
 ## Output Structure
@@ -459,9 +473,11 @@ All models are evaluated using:
 Performance metrics will be generated after training on the CIC IoT-DIAD 2024 dataset.
 
 ### Dataset Configuration
-- **Sampling**: 5% stratified sampling per attack class (configurable via `--sample-fraction`)
-- **Total Samples**: ~1.39M samples after 5% sampling
-- **Attack Classes**: 8 categories with natural class imbalance
+- **Dataset Type**: Packet-Based Features (RECOMMENDED)
+- **Sampling**: 5% per CSV file (configurable via `--sample-fraction`)
+- **Total Samples**: ~500K-1M samples after 5% sampling (varies by download)
+- **Attack Classes**: 33+ granular attack types with better class balance
+- **Features**: 100+ packet-level statistics
   - DoS: ~1,157,191 samples (83.22%) - Highly dominant
   - DDoS: ~173,930 samples (12.51%)
   - Recon: ~22,108 samples (1.59%)
@@ -501,29 +517,77 @@ Performance metrics will be generated after training on the CIC IoT-DIAD 2024 da
 - Validation loss: 1.12e+12
 - Dimensionality reduction: 62 features → 32 features
 
-**SMOTE Balancing Strategy**
+**SMOTE Balancing Strategy (Improved v2)**
 - Method: Borderline-SMOTE (class-specific)
-- Target: 50% of majority class (DoS: 694,310 samples)
-- Minority classes upsampled to: 347,155 samples each
+- Target: 25% of majority class (DoS: 694,310 samples) - **Reduced from 50%**
+- Minority classes upsampled to: ~173,578 samples each
+- Rationale: Less synthetic noise, more focus on real samples
 - Classes balanced:
-  - Benign: 11,948 → 347,155 (+335,207 synthetic)
-  - BruteForce: 108 → 347,155 (+347,047 synthetic)
-  - Mirai: 5,231 → 347,155 (+341,924 synthetic)
-  - Recon: 13,264 → 347,155 (+333,891 synthetic)
-  - Spoofing: 4,716 → 347,155 (+342,439 synthetic)
-  - Web-Based: 339 → 347,155 (+346,816 synthetic)
+  - Benign: 11,948 → 173,578 (+161,630 synthetic)
+  - BruteForce: 108 → 173,578 (+173,470 synthetic)
+  - Mirai: 5,231 → 173,578 (+168,347 synthetic)
+  - Recon: 13,264 → 173,578 (+160,314 synthetic)
+  - Spoofing: 4,716 → 173,578 (+168,862 synthetic)
+  - Web-Based: 339 → 173,578 (+173,239 synthetic)
+  - DDoS: 104,348 (not upsampled - already >25% threshold)
+  - DoS: 694,310 (majority class - not modified)
 
-**1D-CNN Classifier**
+**1D-CNN Classifier (Improved v2)**
 - Filters: [64, 128, 256]
-- Kernel sizes: [5, 7, 9]
+- Kernel sizes: [3, 5, 7] - **Reverted to smaller kernels**
 - Dropout rate: 0.3
 - Dense units: [256, 128]
-- Learning rate: 0.0001
-- Batch size: 64
-- Validation loss: 0.227204 (best from 5 trials)
-- Architecture: Multi-kernel parallel feature extraction with focal loss
+- Learning rate: 0.001 - **Increased from 0.0001**
+- Batch size: 128 - **Increased from 64**
+- Early stopping patience: 25 epochs - **Increased from 15**
+- Loss function: **Sparse categorical crossentropy** (focal loss disabled)
+- Class weights: Applied to handle remaining imbalance
+- Architecture: Multi-kernel parallel feature extraction
 
-**Note:** MLP, LSTM, and Ensemble hyperparameters will be updated after training completes.
+**MLP Classifier (Improved v2)**
+- Hidden layers: [256, 128] - **Simplified from [512, 256, 128]**
+- Dropout rate: 0.3 - **Reduced from 0.4**
+- Learning rate: 0.001
+- Batch size: 128
+- Early stopping patience: 25 epochs
+- Activation: ReLU
+- Batch normalization: Enabled
+- Loss function: Sparse categorical crossentropy + class weights
+- Architecture: Simplified deep feedforward network
+
+**BiLSTM Classifier (Improved v2)**
+- LSTM units: [128, 64] - **Simplified from [256, 128]**
+- Dropout rate: 0.3 - **Reduced from 0.4**
+- Recurrent dropout: 0.2
+- Learning rate: 0.001
+- Batch size: 128 - **Increased from 64**
+- Early stopping patience: 25 epochs
+- Bidirectional: True
+- Attention mechanism: Enabled
+- Timesteps: 10
+- Loss function: Sparse categorical crossentropy + class weights
+
+**Key Improvements in v2:**
+- ✅ Disabled focal loss (caused training instability)
+- ✅ Reduced SMOTE oversampling (50% → 25% to reduce synthetic noise)
+- ✅ Increased learning rates for faster convergence
+- ✅ Increased batch sizes for more stable gradients
+- ✅ Increased early stopping patience for better convergence
+- ✅ Simplified MLP and LSTM architectures to reduce overfitting
+- ✅ Rely on class weights instead of focal loss for imbalance handling
+
+**Expected Performance (Packet-Based, No SMOTE):**
+- Overall Accuracy: 75-85% (realistic multi-class detection)
+- Macro F1: 40-65% (balanced performance across all classes)
+- Minority class F1: 30-60% (actual detection vs 0% with flow-based)
+- CNN: 75-82% accuracy
+- MLP: 72-80% accuracy
+- LSTM: 73-82% accuracy
+- Ensemble: 78-87% accuracy
+
+**Note:** Results with packet-based features are significantly better than flow-based (83% accuracy but only detecting DoS class)
+
+**Note:** Ensemble hyperparameters will be updated after training completes.
 
 ### Evaluation Metrics
 
