@@ -513,7 +513,17 @@ Performance metrics will be generated after training on the CIC IoT-DIAD 2024 da
   - Spoofing: 4,716 → 347,155 (+342,439 synthetic)
   - Web-Based: 339 → 347,155 (+346,816 synthetic)
 
-**Note:** CNN, MLP, LSTM, and Ensemble hyperparameters will be updated after training completes.
+**1D-CNN Classifier**
+- Filters: [64, 128, 256]
+- Kernel sizes: [5, 7, 9]
+- Dropout rate: 0.3
+- Dense units: [256, 128]
+- Learning rate: 0.0001
+- Batch size: 64
+- Validation loss: 0.227204 (best from 5 trials)
+- Architecture: Multi-kernel parallel feature extraction with focal loss
+
+**Note:** MLP, LSTM, and Ensemble hyperparameters will be updated after training completes.
 
 ### Evaluation Metrics
 
