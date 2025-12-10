@@ -25,7 +25,7 @@ class Config:
         'Benign', 'BruteForce', 'DDoS', 'DoS', 'Mirai', 
         'Recon', 'Spoofing', 'Web-Based'
     ]
-    N_CLASSES = len(ATTACK_CLASSES)
+    N_CLASSES = 28  # Packet-based dataset has 28 attack types
     
     DAE_CONFIG = {
         'latent_dims': [32, 64, 128, 256],

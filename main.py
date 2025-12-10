@@ -60,6 +60,11 @@ def main(data_path, optimize_hyperparams=True, optimize_dae=None, use_dae=True, 
     
     X, y = preprocessor.preprocess(df, label_column=label_column, fit=True)
     
+    # Update Config with actual classes from dataset
+    Config.ATTACK_CLASSES = preprocessor.label_encoder.classes_.tolist()
+    Config.N_CLASSES = len(Config.ATTACK_CLASSES)
+    print(f"\nAuto-detected {Config.N_CLASSES} attack classes from dataset")
+    
     X_train, X_val, X_test, y_train, y_val, y_test = preprocessor.split_data(
         X, y,
         test_size=Config.TEST_SIZE,
