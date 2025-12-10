@@ -142,7 +142,8 @@ class DataPreprocessor:
             new_features['rate_mean'] = df[rate_cols].mean(axis=1)
             new_features['rate_max'] = df[rate_cols].max(axis=1)
         
-        for col in numeric_cols[:10]:
+        # Reduced from 10 to 5 columns to save memory
+        for col in numeric_cols[:5]:
             try:
                 new_features[f'{col}_squared'] = df[col] ** 2
                 new_features[f'{col}_log'] = np.log1p(np.abs(df[col]))
