@@ -177,7 +177,7 @@ class SMOTEBalancer:
         
         sampling_strategy = {}
         max_count = max(class_dist.values())
-        target_count = int(max_count * 0.25)  # Target 25% of majority class (reduced from 50%)
+        target_count = int(max_count * 0.05)  # Target 5% of majority class (minimal synthetic noise)
         
         for cls in minority_classes:
             current_count = class_dist[cls]

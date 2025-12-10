@@ -552,28 +552,29 @@ Performance metrics will be generated after training on the CIC IoT-DIAD 2024 da
 
 **SMOTE Balancing Strategy (Packet-Based Dataset)**
 - Method: Borderline-SMOTE (class-specific)
-- Target: 45,727 samples per minority class (~25% of majority class Mirai: 182,911)
+- Target: 9,145 samples per minority class (~5% of majority class Mirai: 182,911)
 - **17 minority classes** balanced (60.7% of all classes)
 - **11 majority classes** unchanged (Mirai, DDoS variants, DoS variants)
+- Conservative approach: Minimal synthetic noise for better generalization
 
 **Classes Balanced (17 total):**
-- Uploading_Attack (class 25): 388 → 45,727 (+45,339 synthetic, 118x)
-- Recon-PingSweep (class 22): 678 → 45,727 (+45,049 synthetic, 67x)
-- Backdoor_Malware (class 0): 1,001 → 45,727 (+44,726 synthetic, 46x)
-- XSS (class 27): 1,203 → 45,727 (+44,524 synthetic, 38x)
-- BrowserHijacking (class 24): 1,579 → 45,727 (+44,148 synthetic, 29x)
-- CommandInjection (class 3): 1,669 → 45,727 (+44,058 synthetic, 27x)
-- SqlInjection (class 2): 1,777 → 45,727 (+43,950 synthetic, 26x)
-- DictionaryBruteForce (class 13): 3,943 → 45,727 (+41,784 synthetic, 11.6x)
-- VulnerabilityScan (class 26): 7,768 → 45,727 (+37,959 synthetic, 5.9x)
-- DDoS-SlowLoris (class 7): 8,657 → 45,727 (+37,070 synthetic, 5.3x)
-- Recon-PortScan (class 20): 8,650 → 45,727 (+37,077 synthetic, 5.3x)
-- DDoS-HTTP_Flood (class 5): 8,710 → 45,727 (+37,017 synthetic, 5.3x)
-- Recon-HostDiscovery (class 21): 8,757 → 45,727 (+36,970 synthetic, 5.2x)
-- Recon-OSScan (class 23): 8,599 → 45,727 (+37,128 synthetic, 5.3x)
-- DNS_Spoofing (class 12): 8,881 → 45,727 (+36,846 synthetic, 5.1x)
-- DoS-HTTP_Flood (class 14): 9,421 → 45,727 (+36,306 synthetic, 4.9x)
-- MITM-ArpSpoofing (class 18): 17,633 → 45,727 (+28,094 synthetic, 2.6x)
+- Uploading_Attack (class 25): 388 → 9,145 (+8,757 synthetic, 23.6x)
+- Recon-PingSweep (class 22): 678 → 9,145 (+8,467 synthetic, 13.5x)
+- Backdoor_Malware (class 0): 1,001 → 9,145 (+8,144 synthetic, 9.1x)
+- XSS (class 27): 1,203 → 9,145 (+7,942 synthetic, 7.6x)
+- BrowserHijacking (class 24): 1,579 → 9,145 (+7,566 synthetic, 5.8x)
+- CommandInjection (class 3): 1,669 → 9,145 (+7,476 synthetic, 5.5x)
+- SqlInjection (class 2): 1,777 → 9,145 (+7,368 synthetic, 5.1x)
+- DictionaryBruteForce (class 13): 3,943 → 9,145 (+5,202 synthetic, 2.3x)
+- VulnerabilityScan (class 26): 7,768 → 9,145 (+1,377 synthetic, 1.2x)
+- DDoS-SlowLoris (class 7): 8,657 → 9,145 (+488 synthetic, 1.1x)
+- Recon-PortScan (class 20): 8,650 → 9,145 (+495 synthetic, 1.1x)
+- DDoS-HTTP_Flood (class 5): 8,710 → 9,145 (+435 synthetic, 1.0x)
+- Recon-HostDiscovery (class 21): 8,757 → 9,145 (+388 synthetic, 1.0x)
+- Recon-OSScan (class 23): 8,599 → 9,145 (+546 synthetic, 1.1x)
+- DNS_Spoofing (class 12): 8,881 → 9,145 (+264 synthetic, 1.0x)
+- DoS-HTTP_Flood (class 14): 9,421 (no upsampling - already above target)
+- MITM-ArpSpoofing (class 18): 17,633 (no upsampling - already above target)
 
 **Classes NOT Balanced (11 majority classes):**
 - Mirai-greip_flood (class 19): 182,911 samples (majority class)
@@ -588,19 +589,22 @@ Performance metrics will be generated after training on the CIC IoT-DIAD 2024 da
 - DoS-TCP_Flood (class 16): 27,987 samples
 - DoS-SYN_Flood (class 15): 20,977 samples
 
-**Total Training Samples After SMOTE**: 1,748,094 samples (increased from 1,070,133)
+**Total Training Samples After SMOTE**: ~1,200,000 samples (increased from 1,070,133)
+- 80% less synthetic data compared to 25% target (1,748,094 samples)
+- Faster training and more stable validation
 
-**1D-CNN Classifier (Improved v2)**
-- Filters: [64, 128, 256]
-- Kernel sizes: [3, 5, 7] - **Reverted to smaller kernels**
+**1D-CNN Classifier (Optimized - Trial 1)**
+- Filters: [128, 256, 512] - **Optimized via Optuna**
+- Kernel sizes: [3, 5, 7]
 - Dropout rate: 0.3
-- Dense units: [256, 128]
-- Learning rate: 0.001 - **Increased from 0.0001**
-- Batch size: 128 - **Increased from 64**
-- Early stopping patience: 25 epochs - **Increased from 15**
-- Loss function: **Sparse categorical crossentropy** (focal loss disabled)
+- Dense units: [512, 256]
+- Learning rate: 0.0001 - **Lower LR for stability**
+- Batch size: 128
+- Early stopping patience: 25 epochs
+- Loss function: Sparse categorical crossentropy (focal loss disabled)
 - Class weights: Applied to handle remaining imbalance
 - Architecture: Multi-kernel parallel feature extraction
+- **Validation loss: 3.180** (best from 2 optimization trials)
 
 **MLP Classifier (Improved v2)**
 - Hidden layers: [256, 128] - **Simplified from [512, 256, 128]**
