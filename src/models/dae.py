@@ -122,8 +122,9 @@ class DenoisingAutoencoder:
         
         return self.history
     
-    def encode(self, X):
-        return self.encoder.predict(X, verbose=0)
+    def encode(self, X, batch_size=10000):
+        # Process in batches to avoid OOM
+        return self.encoder.predict(X, verbose=0, batch_size=batch_size)
     
     def decode(self, latent):
         return self.decoder.predict(latent, verbose=0)
