@@ -541,14 +541,17 @@ Performance metrics will be generated after training on the CIC IoT-DIAD 2024 da
 
 ### Optimized Hyperparameters (5% Dataset, 5 Trials)
 
-**Denoising Autoencoder (DAE) - Packet-Based Dataset**
-- Latent dimensions: 256 (expansion from 96 input features)
-- Architecture: Optimized via Optuna (5 trials)
-- Noise factor: Optimized
-- Dropout rate: Optimized
-- Learning rate: Optimized
-- **Dimensionality expansion**: 96 features → 256 features
-- Rationale: Complex 28-class problem benefits from expanded latent space
+**Denoising Autoencoder (DAE) - Packet-Based Dataset (Optimized)**
+- Latent dimensions: 64 (reduction from 92 input features)
+- Encoder layers: [512, 256, 128]
+- Noise factor: 0.3
+- Dropout rate: 0.3
+- Learning rate: 0.001
+- Batch size: 256
+- Architecture: Optimized via Optuna (5 trials, Trial 1 best)
+- **Best validation loss**: 1.082e+19
+- **Dimensionality reduction**: 92 features → 64 features
+- Rationale: Optimal balance between compression and information preservation
 
 **SMOTE Balancing Strategy (Packet-Based Dataset)**
 - Method: Borderline-SMOTE (class-specific)
