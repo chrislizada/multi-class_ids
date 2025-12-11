@@ -147,20 +147,13 @@ def main(data_path, optimize_hyperparams=True, optimize_dae=None, use_dae=True, 
     
     if use_smote:
         print("\n" + "="*80)
-        print("STEP 3: CLASS BALANCING WITH SMOTE")
+        print("STEP 3: ADVANCED CLASS BALANCING WITH BORDERLINE-SMOTE + ENN")
         print("="*80)
         
         smote_balancer = SMOTEBalancer(Config.SMOTE_CONFIG, random_state=Config.RANDOM_STATE)
         
-        from collections import Counter
-        class_dist = Counter(y_train)
-        mean_count = np.mean(list(class_dist.values()))
-        minority_classes = [cls for cls, count in class_dist.items() if count < mean_count * 0.5]
-        
-        print(f"Auto-detected minority classes: {minority_classes}")
-        
-        X_train, y_train = smote_balancer.balance_with_class_specific_strategy(
-            X_train, y_train, minority_classes=minority_classes if len(minority_classes) > 0 else None
+        X_train, y_train = smote_balancer.balance_with_hybrid_strategy(
+            X_train, y_train, minority_classes=None
         )
         
         joblib.dump(smote_balancer, experiment_dir / 'smote_balancer.pkl')
