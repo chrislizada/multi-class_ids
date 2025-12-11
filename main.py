@@ -184,9 +184,9 @@ def main(data_path, optimize_hyperparams=True, optimize_dae=None, use_dae=True, 
         cnn.optimize_hyperparameters(X_train, y_train, X_val, y_val, 
                                     class_weight=class_weights, n_trials=Config.OPTIMIZATION_CONFIG['n_trials'])
     else:
-        # Use Trial 1 optimized parameters with increased LR for faster convergence
+        # Use fixed CNN parameters
         cnn.build_model(filters=[128, 256, 512], kernel_sizes=[3, 5, 7],
-                       dropout_rate=0.3, dense_units=[512, 256], learning_rate=0.001)
+                       dropout_rate=0.3, dense_units=[512, 256], learning_rate=0.0001)
         cnn.train(X_train, y_train, X_val, y_val, batch_size=128, 
                  epochs=100, patience=25, class_weight=class_weights)
     
@@ -309,8 +309,8 @@ def main(data_path, optimize_hyperparams=True, optimize_dae=None, use_dae=True, 
         lstm.optimize_hyperparameters(X_train, y_train, X_val, y_val, 
                                      class_weight=class_weights, n_trials=Config.OPTIMIZATION_CONFIG['n_trials'])
     else:
-        lstm.build_model(units=[128, 64], dropout_rate=0.3, recurrent_dropout=0.2,
-                        learning_rate=0.001, bidirectional=True, use_attention=True)
+        lstm.build_model(units=[128, 64], dropout_rate=0.3, recurrent_dropout=0.0,
+                        learning_rate=0.0001, bidirectional=True, use_attention=True)
         lstm.train(X_train, y_train, X_val, y_val, batch_size=128, 
                   epochs=100, patience=25, class_weight=class_weights)
     
