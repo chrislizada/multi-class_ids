@@ -147,12 +147,12 @@ def main(data_path, optimize_hyperparams=True, optimize_dae=None, use_dae=True, 
     
     if use_smote:
         print("\n" + "="*80)
-        print("STEP 3: ADVANCED CLASS BALANCING WITH BORDERLINE-SMOTE + ENN")
+        print("STEP 3: ADAPTIVE CLASS BALANCING WITH BORDERLINE-SMOTE")
         print("="*80)
         
         smote_balancer = SMOTEBalancer(Config.SMOTE_CONFIG, random_state=Config.RANDOM_STATE)
         
-        X_train, y_train = smote_balancer.balance_with_hybrid_strategy(
+        X_train, y_train = smote_balancer.balance_with_adaptive_strategy(
             X_train, y_train, minority_classes=None
         )
         

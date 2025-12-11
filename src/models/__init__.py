@@ -4,7 +4,7 @@ from .ensemble import EnsembleClassifier
 
 from .cnn_classifier_fixed import CNNClassifier
 from .lstm_classifier_fixed import LSTMClassifier
-from .smote_balancer_advanced import AdvancedSMOTEBalancer as SMOTEBalancer
+from .smote_balancer_fixed import SMOTEBalancer
 
 __all__ = [
     'DenoisingAutoencoder',
