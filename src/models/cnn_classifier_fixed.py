@@ -113,7 +113,7 @@ class CNNClassifier:
         model.compile(
             optimizer=optimizer,
             loss=loss,
-            metrics=['accuracy', keras.metrics.TopKCategoricalAccuracy(k=3, name='top3_acc')]
+            metrics=['accuracy']
         )
         
         self.model = model
