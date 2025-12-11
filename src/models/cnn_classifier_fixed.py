@@ -73,7 +73,7 @@ class CNNClassifier:
                 branch = layers.BatchNormalization()(branch)
                 branch = layers.Activation('relu')(branch)
                 
-                if i < len(filters) - 1:
+                if i == 0:
                     branch = layers.MaxPooling1D(pool_size=2)(branch)
             
             branch = layers.GlobalMaxPooling1D()(branch)

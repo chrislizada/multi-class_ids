@@ -91,13 +91,13 @@ class LSTMClassifier:
         
     def _calculate_optimal_features_per_timestep(self, input_dim):
         if input_dim < 20:
-            return max(1, input_dim // 5)
+            return max(1, input_dim // 4)
         elif input_dim < 50:
-            return max(1, input_dim // 10)
+            return max(1, input_dim // 5)
         elif input_dim < 100:
-            return max(1, input_dim // 8)
+            return max(1, input_dim // 4)
         else:
-            return max(1, input_dim // 16)
+            return max(1, input_dim // 8)
     
     def reshape_for_lstm(self, X):
         n_samples = X.shape[0]
