@@ -141,20 +141,23 @@ This implementation follows a complete end-to-end pipeline for multi-class intru
    └─> Remove highly correlated features (correlation > 0.95)
    └─> RobustScaler normalization
    └─> OneHotEncoder for categorical features
-   └─> Train/test split (80/20)
+   └─> Train/Val/Test split (60/20/20)
 
-3. Dimensionality Reduction (src/models/dae.py)
+3. Class Balancing (src/models/smote_balancer.py)
+   └─> Calculate class weights (on ORIGINAL training distribution)
+   └─> Auto-detect minority classes
+   └─> Apply Borderline-SMOTE / ADASYN (TRAINING DATA ONLY)
+   └─> Dynamic k_neighbors adjustment
+   └─> Validation and test sets remain ORIGINAL and IMBALANCED
+   └─> Output: balanced training set only
+
+4. Dimensionality Reduction (src/models/dae.py)
    └─> Denoising Autoencoder (DAE)
    └─> Optuna hyperparameter optimization (20 trials)
+   └─> Trained on SMOTE-augmented training data
+   └─> Applied to all sets (train/val/test)
    └─> Reduce features: 84+ → 32-256 latent dimensions
    └─> Save encoder for inference
-
-4. Class Balancing (src/models/smote_balancer.py)
-   └─> Calculate class weights (before SMOTE)
-   └─> Auto-detect minority classes
-   └─> Apply Borderline-SMOTE / ADASYN
-   └─> Dynamic k_neighbors adjustment
-   └─> Output: balanced training set
 
 5. Model Training (main.py)
    ├─> MLP Classifier (src/models/mlp_classifier.py)
@@ -189,6 +192,21 @@ This implementation follows a complete end-to-end pipeline for multi-class intru
    └─> Per-model directories with metrics and trained models
    └─> Confusion matrices, ROC curves, reports
 ```
+
+### Pipeline Order (Critical)
+
+**IMPORTANT**: The pipeline has been optimized to apply transformations in the following order:
+
+1. **Preprocessing** → Feature engineering and normalization
+2. **Train/Val/Test Split** → Separate data into three sets
+3. **SMOTE Balancing** → Applied ONLY to training data (validation and test remain original)
+4. **DAE Feature Reduction** → Applied to all sets (train/val/test)
+5. **DL Classifier Training** → CNN, MLP, LSTM, and Ensemble models
+
+**Rationale**: 
+- SMOTE is applied **before** DAE to preserve class-discriminative patterns in the original feature space
+- Class weights are calculated on the **original pre-SMOTE** training distribution to inform the model about real-world imbalance
+- Validation and test sets remain **original and imbalanced** to evaluate generalization to real-world data
 
 ## Usage
 

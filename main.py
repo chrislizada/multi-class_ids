@@ -74,14 +74,28 @@ def main(data_path, optimize_hyperparams=True, optimize_dae=None, use_dae=True, 
     
     joblib.dump(preprocessor, experiment_dir / 'preprocessor.pkl')
     
+    class_weights_original = calculate_class_weights(y_train)
+    
+    if use_smote:
+        print("\n" + "="*80)
+        print("STEP 2: ADAPTIVE CLASS BALANCING WITH BORDERLINE-SMOTE")
+        print("="*80)
+        
+        smote_balancer = SMOTEBalancer(Config.SMOTE_CONFIG, random_state=Config.RANDOM_STATE)
+        
+        X_train, y_train = smote_balancer.balance_with_adaptive_strategy(
+            X_train, y_train, minority_classes=None
+        )
+        
+        joblib.dump(smote_balancer, experiment_dir / 'smote_balancer.pkl')
+    
     if use_dae:
         print("\n" + "="*80)
-        print("STEP 2: DIMENSIONALITY REDUCTION WITH DAE")
+        print("STEP 3: DIMENSIONALITY REDUCTION WITH DAE")
         print("="*80)
         
         dae = DenoisingAutoencoder(input_dim=X_train.shape[1], config=Config.DAE_CONFIG)
         
-        # Check if loading pre-trained DAE
         if load_dae_path:
             from pathlib import Path
             import tensorflow as tf
@@ -92,7 +106,6 @@ def main(data_path, optimize_hyperparams=True, optimize_dae=None, use_dae=True, 
             if not dae_path.exists():
                 raise ValueError(f"DAE path does not exist: {load_dae_path}")
             
-            # Load encoder
             encoder_path = dae_path / 'encoder.h5'
             if encoder_path.exists():
                 dae.encoder = tf.keras.models.load_model(encoder_path)
@@ -100,17 +113,14 @@ def main(data_path, optimize_hyperparams=True, optimize_dae=None, use_dae=True, 
             else:
                 raise ValueError(f"Encoder not found at: {encoder_path}")
             
-            # Load best params if available
             params_path = dae_path / 'best_params.pkl'
             if params_path.exists():
                 dae.best_params = joblib.load(params_path)
                 print(f"Loaded DAE parameters: {dae.best_params}")
         
-        # Determine if DAE should be optimized
         elif optimize_dae if optimize_dae is not None else optimize_hyperparams:
             dae.optimize_hyperparameters(X_train, X_val, n_trials=Config.OPTIMIZATION_CONFIG['n_trials'])
         else:
-            # Use best parameters from previous optimization (Trial 3)
             print("Using pre-optimized DAE hyperparameters")
             dae.build_autoencoder(
                 encoder_layers=[1024, 512, 256],
@@ -125,11 +135,9 @@ def main(data_path, optimize_hyperparams=True, optimize_dae=None, use_dae=True, 
         X_val_encoded = dae.encode(X_val)
         X_test_encoded = dae.encode(X_test)
         
-        # Save DAE only if it was trained (not loaded)
         if not load_dae_path:
             dae.save(experiment_dir / 'dae')
         else:
-            # Just save the encoder and params for loaded DAE
             import shutil
             dae_save_dir = experiment_dir / 'dae'
             dae_save_dir.mkdir(parents=True, exist_ok=True)
@@ -142,21 +150,6 @@ def main(data_path, optimize_hyperparams=True, optimize_dae=None, use_dae=True, 
         X_train = X_train_encoded
         X_val = X_val_encoded
         X_test = X_test_encoded
-    
-    class_weights_original = calculate_class_weights(y_train)
-    
-    if use_smote:
-        print("\n" + "="*80)
-        print("STEP 3: ADAPTIVE CLASS BALANCING WITH BORDERLINE-SMOTE")
-        print("="*80)
-        
-        smote_balancer = SMOTEBalancer(Config.SMOTE_CONFIG, random_state=Config.RANDOM_STATE)
-        
-        X_train, y_train = smote_balancer.balance_with_adaptive_strategy(
-            X_train, y_train, minority_classes=None
-        )
-        
-        joblib.dump(smote_balancer, experiment_dir / 'smote_balancer.pkl')
     
     class_weights = class_weights_original
     print(f"\nClass weights: {class_weights}")
@@ -184,9 +177,9 @@ def main(data_path, optimize_hyperparams=True, optimize_dae=None, use_dae=True, 
         cnn.optimize_hyperparameters(X_train, y_train, X_val, y_val, 
                                     class_weight=class_weights, n_trials=Config.OPTIMIZATION_CONFIG['n_trials'])
     else:
-        # Use fixed CNN parameters
-        cnn.build_model(filters=[128, 256, 512], kernel_sizes=[3, 5, 7],
-                       dropout_rate=0.3, dense_units=[512, 256], learning_rate=0.0001)
+        # Use fixed CNN parameters - simplified architecture
+        cnn.build_model(filters=[64, 128], kernel_sizes=[3, 5],
+                       dropout_rate=0.2, dense_units=[256, 128], learning_rate=0.0001)
         cnn.train(X_train, y_train, X_val, y_val, batch_size=128, 
                  epochs=100, patience=25, class_weight=class_weights)
     
