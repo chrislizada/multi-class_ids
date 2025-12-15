@@ -179,7 +179,7 @@ def main(data_path, optimize_hyperparams=True, optimize_dae=None, use_dae=True, 
     else:
         # Use fixed CNN parameters - simplified architecture
         cnn.build_model(filters=[64, 128], kernel_sizes=[3, 5],
-                       dropout_rate=0.2, dense_units=[256, 128], learning_rate=0.0001)
+                       dropout_rate=0.2, dense_units=[256, 128], learning_rate=0.001)
         cnn.train(X_train, y_train, X_val, y_val, batch_size=128, 
                  epochs=100, patience=25, class_weight=class_weights)
     
